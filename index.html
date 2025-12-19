@@ -1,0 +1,89 @@
+<button id="recBtn">🎙️ Start recording</button>
+<button id="stopBtn" disabled>⏹ Stop</button>
+<button id="sendBtn" disabled>🚀 Render video with this voice</button>
+<a id="dl" style="display:none;" download="recording.webm">Download recording</a>
+
+<script>
+let mediaRecorder;
+let chunks = [];
+let recordedBlob;
+
+const recBtn = document.getElementById("recBtn");
+const stopBtn = document.getElementById("stopBtn");
+const sendBtn = document.getElementById("sendBtn");
+const dl = document.getElementById("dl");
+
+recBtn.onclick = async () => {
+  chunks = [];
+  recordedBlob = null;
+
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+    ? { mimeType: "audio/webm;codecs=opus" }
+    : {};
+
+  mediaRecorder = new MediaRecorder(stream, options);
+
+  mediaRecorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) chunks.push(e.data);
+  };
+
+  mediaRecorder.onstop = () => {
+    recordedBlob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
+
+    // Optional: allow user to download/play locally
+    const url = URL.createObjectURL(recordedBlob);
+    dl.href = url;
+    dl.style.display = "inline";
+    sendBtn.disabled = false;
+  };
+
+  mediaRecorder.start();
+  recBtn.disabled = true;
+  stopBtn.disabled = false;
+};
+
+stopBtn.onclick = () => {
+  mediaRecorder.stop();
+  stopBtn.disabled = true;
+  recBtn.disabled = false;
+};
+
+sendBtn.onclick = async () => {
+  // Your normal JSON payload:
+  const payload = {
+    durationSec: 12,
+    format: "reel",
+    transition: "fade",
+    slides: [
+      { imageUrl: "https://example.com/1.jpg", headline: "Slide 1" },
+      { imageUrl: "https://example.com/2.jpg", headline: "Slide 2" }
+    ],
+    audioVolume: 0.35
+  };
+
+  const form = new FormData();
+  form.append("payload", JSON.stringify(payload));
+  form.append("audio", recordedBlob, "voice.webm"); // important filename
+
+  const res = await fetch("http://localhost:8000/render-upload", {
+    method: "POST",
+    body: form
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    alert("Render failed:\n" + txt);
+    return;
+  }
+
+  const mp4Blob = await res.blob();
+  const outUrl = URL.createObjectURL(mp4Blob);
+
+  // auto-download result
+  const a = document.createElement("a");
+  a.href = outUrl;
+  a.download = "video.mp4";
+  a.click();
+};
+</script>
