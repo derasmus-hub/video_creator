@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
   <title>Video Renderer — Control Room</title>
   <style>
     :root{
@@ -20,7 +21,9 @@
       --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
     }
 
+    * { box-sizing: border-box; }
     html, body { height: 100%; }
+
     body {
       margin: 0;
       font-family: var(--sans);
@@ -50,6 +53,7 @@
       font-size: clamp(22px, 3vw, 34px);
       letter-spacing: 0.4px;
     }
+
     .sub {
       margin: 6px 0 0;
       color: var(--muted);
@@ -67,6 +71,7 @@
 
     @media (max-width: 980px) {
       .grid { grid-template-columns: 1fr; }
+      header { align-items: flex-start; flex-direction: column; }
     }
 
     .card {
@@ -93,13 +98,21 @@
 
     input[type="text"], input[type="number"], input[type="url"], select, textarea {
       width: 100%;
-      box-sizing: border-box;
       border: 1px solid rgba(255,255,255,0.16);
       background: rgba(255,255,255,0.06);
       color: var(--text);
       border-radius: 12px;
       padding: 10px 10px;
       outline: none;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    input[type="url"]:focus,
+    select:focus,
+    textarea:focus {
+      border-color: rgba(99,179,237,0.65);
+      box-shadow: 0 0 0 3px rgba(99,179,237,0.18);
     }
 
     textarea { min-height: 64px; resize: vertical; }
@@ -156,12 +169,14 @@
       padding: 10px 12px;
       border-radius: 12px;
       cursor: pointer;
-      transition: transform .05s ease, background .15s ease, border-color .15s ease;
+      transition: transform .05s ease, background .15s ease, border-color .15s ease, opacity .15s ease;
       user-select: none;
       font-weight: 600;
     }
+
     .btn:hover { background: rgba(255,255,255,0.12); }
     .btn:active { transform: translateY(1px); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
     .btn.primary {
       background: rgba(99,179,237,0.22);
@@ -208,12 +223,95 @@
       border: 1px solid rgba(255,255,255,0.12);
       background: rgba(255,255,255,0.05);
     }
+
     .toggle input { transform: scale(1.2); }
 
     .divider {
       height: 1px;
       background: rgba(255,255,255,0.10);
       margin: 14px 0;
+    }
+
+    /* --- Drag & Drop image box --- */
+    .drop {
+      border: 1px dashed rgba(255,255,255,0.22);
+      background: rgba(255,255,255,0.04);
+      border-radius: 14px;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      transition: border-color .15s ease, background .15s ease, transform .05s ease;
+    }
+
+    .drop:hover {
+      border-color: rgba(99,179,237,0.55);
+      background: rgba(99,179,237,0.08);
+    }
+
+    .drop.dragover {
+      border-color: rgba(74,222,128,0.75);
+      background: rgba(74,222,128,0.10);
+      transform: translateY(-1px);
+    }
+
+    .drop-top {
+      display:flex;
+      justify-content:space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .drop-title {
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .drop-hint {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .drop-actions {
+      display:flex;
+      gap: 10px;
+      align-items:center;
+    }
+
+    .drop input[type="file"] {
+      display: none;
+    }
+
+    .drop-preview {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.25);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color: rgba(255,255,255,0.70);
+      font-size: 12px;
+    }
+
+    .drop-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display:block;
+    }
+
+    .url-fallback {
+      display:grid;
+      gap: 6px;
+    }
+
+    .tiny-note {
+      font-size: 12px;
+      color: rgba(255,255,255,0.65);
     }
   </style>
 </head>
@@ -223,7 +321,7 @@
     <header>
       <div>
         <h1>Video Renderer — Control Room</h1>
-        <p class="sub">Feed 4–25 image URLs + optional headlines, choose a style, optionally upload or record audio, and get back an MP4. This page talks to your FastAPI renderer.</p>
+        <p class="sub">Feed 4–25 images + optional headlines, choose a style, optionally upload or record audio, and get back an MP4.</p>
       </div>
       <div class="pill">v1 UI</div>
     </header>
@@ -233,7 +331,7 @@
       <div class="card">
         <div class="row">
           <div class="field">
-            <label>API Base URL</label>
+            <label for="apiBase">API Base URL</label>
             <input id="apiBase" type="url" value="http://localhost:8000" />
             <div class="hint" style="margin-top:6px;">Use <span class="pill">http://localhost:8000</span> locally, or your public domain if deployed.</div>
           </div>
@@ -243,7 +341,7 @@
 
         <div class="row">
           <div class="field small">
-            <label>Format</label>
+            <label for="format">Format</label>
             <select id="format">
               <option value="reel">reel (1080×1920)</option>
               <option value="square">square (1080×1080)</option>
@@ -252,7 +350,7 @@
           </div>
 
           <div class="field small">
-            <label>Style</label>
+            <label for="style">Style</label>
             <select id="style">
               <option value="dark_lab">dark_lab</option>
               <option value="clean_medical">clean_medical</option>
@@ -261,7 +359,7 @@
           </div>
 
           <div class="field small">
-            <label>Transition</label>
+            <label for="transition">Transition</label>
             <select id="transition">
               <option value="fade">fade</option>
               <option value="wipeleft">wipeleft</option>
@@ -272,17 +370,17 @@
           </div>
 
           <div class="field tiny">
-            <label>FPS</label>
+            <label for="fps">FPS</label>
             <input id="fps" type="number" min="1" max="60" value="30" />
           </div>
 
           <div class="field tiny">
-            <label>Duration (sec)</label>
+            <label for="durationSec">Duration (sec)</label>
             <input id="durationSec" type="number" min="2" value="12" />
           </div>
 
           <div class="field tiny">
-            <label>Audio Volume (0..1)</label>
+            <label for="audioVolume">Audio Volume (0..1)</label>
             <input id="audioVolume" type="number" min="0" max="1" step="0.01" value="0.18" />
           </div>
         </div>
@@ -300,28 +398,28 @@
             </div>
           </div>
           <div class="field">
-            <label>Logo URL (optional)</label>
+            <label for="logoUrl">Logo URL (optional)</label>
             <input id="logoUrl" type="url" placeholder="https://.../logo.png" />
           </div>
         </div>
 
         <div class="row" style="margin-top:10px;">
           <div class="field small">
-            <label>Intro</label>
+            <label for="intro">Intro</label>
             <select id="intro">
               <option value="true" selected>true</option>
               <option value="false">false</option>
             </select>
           </div>
           <div class="field small">
-            <label>Outro</label>
+            <label for="outro">Outro</label>
             <select id="outro">
               <option value="true" selected>true</option>
               <option value="false">false</option>
             </select>
           </div>
           <div class="field">
-            <label>Outro Text</label>
+            <label for="outroText">Outro Text</label>
             <input id="outroText" type="text" value="Follow for more • DM us to automate your content" />
           </div>
         </div>
@@ -331,9 +429,9 @@
         <div class="row" style="justify-content:space-between; align-items:center;">
           <div class="hint">Slides: <span id="slideCount" class="pill">0</span> (must be 4–25)</div>
           <div class="row">
-            <button id="addSlide" class="btn slim">+ Add Slide</button>
-            <button id="loadDemo" class="btn slim">Load Demo (4)</button>
-            <button id="clearSlides" class="btn slim danger">Clear</button>
+            <button id="addSlide" class="btn slim" type="button">+ Add Slide</button>
+            <button id="loadDemo" class="btn slim" type="button">Load Demo (4)</button>
+            <button id="clearSlides" class="btn slim danger" type="button">Clear</button>
           </div>
         </div>
 
@@ -342,11 +440,11 @@
         <div class="divider"></div>
 
         <div class="row">
-          <button id="renderBtn" class="btn primary" style="flex:1;">Render Video</button>
+          <button id="renderBtn" class="btn primary" type="button" style="flex:1;">Render Video</button>
         </div>
 
         <div class="hint" style="margin-top:10px;">
-          Tip: for 25 slides, increase duration (your backend will still try, but the video will be frantic). A comfy rule is ~1.4 seconds/slide.
+          Tip: for 25 slides, increase duration. A comfy rule is ~1.4 seconds/slide.
         </div>
       </div>
 
@@ -362,7 +460,7 @@
 
         <div class="row">
           <div class="field">
-            <label>Audio Mode</label>
+            <label for="audioMode">Audio Mode</label>
             <select id="audioMode">
               <option value="none" selected>None</option>
               <option value="upload">Upload file (audio or video)</option>
@@ -372,15 +470,15 @@
         </div>
 
         <div id="uploadBox" style="display:none; margin-top:10px;">
-          <label>Upload audio/video file (we’ll extract audio)</label>
+          <label for="audioFile">Upload audio/video file (we’ll extract audio)</label>
           <input id="audioFile" type="file" accept="audio/*,video/*" />
           <div class="hint" style="margin-top:8px;">This will call <span class="pill">/render-upload</span>.</div>
         </div>
 
         <div id="recordBox" style="display:none; margin-top:10px;">
           <div class="row">
-            <button id="recStart" class="btn ok" style="flex:1;">Start Recording</button>
-            <button id="recStop" class="btn danger" style="flex:1;" disabled>Stop</button>
+            <button id="recStart" class="btn ok" type="button" style="flex:1;">Start Recording</button>
+            <button id="recStop" class="btn danger" type="button" style="flex:1;" disabled>Stop</button>
           </div>
           <audio id="recPreview" controls style="width:100%; margin-top:10px; display:none;"></audio>
           <div class="hint" style="margin-top:8px;">
@@ -399,7 +497,7 @@
         <div class="hint">
           <ul style="margin:0; padding-left:18px; line-height:1.4;">
             <li>Slides must be <b>4–25</b></li>
-            <li>Each slide needs <b>imageUrl</b></li>
+            <li>Each slide needs an <b>image</b> (file or URL)</li>
             <li>Audio upload or recording triggers <b>/render-upload</b></li>
             <li>No audio triggers <b>/render</b></li>
           </ul>
@@ -409,6 +507,8 @@
   </div>
 
 <script>
+  "use strict";
+
   // ---------- DOM ----------
   const el = (id) => document.getElementById(id);
 
@@ -424,66 +524,21 @@
   const recStartBtn = el("recStart");
   const recStopBtn = el("recStop");
   const recPreview = el("recPreview");
+  const renderBtn = el("renderBtn");
 
   let recordedBlob = null;
   let recStream = null;
   let recorder = null;
   let recChunks = [];
 
+  const N8N_IMAGE_WEBHOOK = "https://erasmus-consulting.app.n8n.cloud/webhook-test/video-render";
+
   // ---------- Helpers ----------
   function logStatus(msg) {
     statusEl.textContent = msg;
   }
 
-  function currentSlides() {
-    const nodes = slidesEl.querySelectorAll(".slide");
-    return [...nodes].map((node) => {
-      const imageUrl = node.querySelector(".imageUrl").value.trim();
-      const headline = node.querySelector(".headline").value.trim();
-      return { imageUrl, headline: headline || null };
-    });
-  }
-
-  function refreshSlideCount() {
-    const count = slidesEl.querySelectorAll(".slide").length;
-    slideCountEl.textContent = String(count);
-  }
-
-  function addSlide(data = {}) {
-    const idx = slidesEl.querySelectorAll(".slide").length + 1;
-    const wrap = document.createElement("div");
-    wrap.className = "slide";
-    wrap.innerHTML = `
-      <div class="slide-head">
-        <div class="pill">Slide ${idx}</div>
-        <button class="btn slim danger remove">Remove</button>
-      </div>
-      <div class="row">
-        <div class="field">
-          <label>Image URL</label>
-          <input class="imageUrl" type="url" placeholder="https://..." value="${data.imageUrl ? escapeHtml(data.imageUrl) : ""}" />
-        </div>
-      </div>
-      <div class="row">
-        <div class="field">
-          <label>Headline (optional)</label>
-          <input class="headline" type="text" placeholder="Your headline..." value="${data.headline ? escapeHtml(data.headline) : ""}" />
-        </div>
-      </div>
-    `;
-    wrap.querySelector(".remove").addEventListener("click", () => {
-      wrap.remove();
-      // Re-label slide numbers
-      [...slidesEl.querySelectorAll(".slide")].forEach((s, i) => {
-        s.querySelector(".pill").textContent = `Slide ${i+1}`;
-      });
-      refreshSlideCount();
-    });
-    slidesEl.appendChild(wrap);
-    refreshSlideCount();
-  }
-
-  function escapeHtml(str){
+  function escapeHtml(str) {
     return String(str)
       .replaceAll("&","&amp;")
       .replaceAll("<","&lt;")
@@ -492,21 +547,105 @@
       .replaceAll("'","&#039;");
   }
 
-  function buildPayload() {
-    const slides = currentSlides();
+  function cleanupSlidePreview(slideEl) {
+    if (slideEl && slideEl._previewObjectUrl) {
+      try { URL.revokeObjectURL(slideEl._previewObjectUrl); } catch {}
+      slideEl._previewObjectUrl = null;
+    }
+  }
 
-    const fps = Number(el("fps").value);
-    const durationSec = Number(el("durationSec").value);
-    const audioVolume = Number(el("audioVolume").value);
+  function applySlideFile(slideEl, file, previewEl, clearBtn) {
+    cleanupSlidePreview(slideEl);
 
-    const payload = {
+    slideEl._imageFile = file;
+    clearBtn.style.display = "inline-block";
+
+    const url = URL.createObjectURL(file);
+    slideEl._previewObjectUrl = url;
+    previewEl.innerHTML = `<img src="${url}" alt="preview" />`;
+  }
+
+  function currentSlides() {
+    const nodes = slidesEl.querySelectorAll(".slide");
+    return [...nodes].map((node) => {
+      const headline = node.querySelector(".headline").value.trim();
+      const file = node._imageFile || null;
+      const imageUrl = node.querySelector(".imageUrl").value.trim();
+
+      return {
+        imageUrl: imageUrl || "",
+        headline: headline || null,
+        file: file
+      };
+    });
+  }
+
+  function refreshSlideCount() {
+    const count = slidesEl.querySelectorAll(".slide").length;
+    slideCountEl.textContent = String(count);
+  }
+
+  function relabelSlides() {
+    [...slidesEl.querySelectorAll(".slide")].forEach((s, i) => {
+      const pill = s.querySelector(".pill");
+      if (pill) pill.textContent = `Slide ${i + 1}`;
+    });
+  }
+
+  async function uploadSlideImagesToN8n(slides) {
+    const hasFiles = slides.some(s => s.file);
+    if (!hasFiles) return slides;
+
+    logStatus("⬆️ Uploading images to n8n…");
+
+    const fd = new FormData();
+
+    slides.forEach((s, i) => {
+      if (s.file) {
+        fd.append("files", s.file, s.file.name || `slide_${i+1}.png`);
+      }
+    });
+
+    fd.append("meta", JSON.stringify({
+      count: slides.length,
+      order: slides.map((s, i) => ({ index: i, hasFile: !!s.file }))
+    }));
+
+    const res = await fetch(N8N_IMAGE_WEBHOOK, { method: "POST", body: fd });
+
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      throw new Error(`n8n upload failed: HTTP ${res.status}\n${t}`);
+    }
+
+    const j = await res.json().catch(() => null);
+
+    if (!j || !Array.isArray(j.urls)) {
+      throw new Error(`n8n upload response invalid. Expected { urls: [...] } but got:\n${JSON.stringify(j, null, 2)}`);
+    }
+
+    let fileUrlIdx = 0;
+    const out = slides.map(s => {
+      if (s.file) {
+        const u = j.urls[fileUrlIdx++];
+        if (!u) throw new Error("n8n returned fewer URLs than uploaded files.");
+        return { ...s, imageUrl: u, file: null };
+      }
+      return s;
+    });
+
+    return out;
+  }
+
+  function buildUiState() {
+    return {
       format: el("format").value,
       style: el("style").value,
       transition: el("transition").value,
-      durationSec: durationSec,
-      slides: slides.map(s => ({ imageUrl: s.imageUrl, headline: s.headline || undefined })),
-      output: { fps: fps },
-      audioVolume: audioVolume,
+      durationSec: Number(el("durationSec").value),
+      slides: currentSlides(),
+      output: { fps: Number(el("fps").value) },
+      audioVolume: Number(el("audioVolume").value),
       brand: {
         watermark: el("wmOn").checked,
         logoUrl: el("logoUrl").value.trim() || undefined,
@@ -515,31 +654,47 @@
         outroText: el("outroText").value.trim() || undefined
       }
     };
-
-    return payload;
   }
 
-  function validateBeforeSend(payload) {
-    if (!Array.isArray(payload.slides) || payload.slides.length < 4 || payload.slides.length > 25) {
-      throw new Error(`Slides must be 4–25. You have ${payload.slides?.length ?? 0}.`);
+  function toApiPayload(ui) {
+    return {
+      ...ui,
+      slides: ui.slides.map(s => ({
+        imageUrl: s.imageUrl,
+        headline: s.headline || undefined
+      }))
+    };
+  }
+
+  function validateBeforeSend(uiState) {
+    if (!Array.isArray(uiState.slides) || uiState.slides.length < 4 || uiState.slides.length > 25) {
+      throw new Error(`Slides must be 4–25. You have ${uiState.slides?.length ?? 0}.`);
     }
-    for (let i = 0; i < payload.slides.length; i++) {
-      const u = (payload.slides[i].imageUrl || "").trim();
-      if (!u) throw new Error(`Slide ${i+1} is missing imageUrl.`);
+
+    for (let i = 0; i < uiState.slides.length; i++) {
+      const hasUrl = (uiState.slides[i].imageUrl || "").trim().length > 0;
+      const hasFile = !!uiState.slides[i].file;
+      if (!hasUrl && !hasFile) {
+        throw new Error(`Slide ${i+1} needs an image (drop a file or paste URL).`);
+      }
     }
-    if (!Number.isFinite(payload.durationSec) || payload.durationSec < 2) {
+
+    if (!Number.isFinite(uiState.durationSec) || uiState.durationSec < 2) {
       throw new Error("Duration must be at least 2 seconds.");
     }
-    if (!Number.isFinite(payload.output?.fps) || payload.output.fps < 1 || payload.output.fps > 60) {
+
+    if (!Number.isFinite(uiState.output?.fps) || uiState.output.fps < 1 || uiState.output.fps > 60) {
       throw new Error("FPS must be 1–60.");
     }
-    if (!Number.isFinite(payload.audioVolume) || payload.audioVolume < 0 || payload.audioVolume > 1) {
+
+    if (!Number.isFinite(uiState.audioVolume) || uiState.audioVolume < 0 || uiState.audioVolume > 1) {
       throw new Error("Audio volume must be 0..1.");
     }
   }
 
   async function postAndDownloadMp4(url, fetchOptions) {
     logStatus("Rendering… (this can take a bit depending on slide count)");
+
     const res = await fetch(url, fetchOptions);
 
     if (!res.ok) {
@@ -567,19 +722,145 @@
     logStatus("✅ Done. Downloaded video.mp4");
   }
 
+  function setRenderingState(isRendering) {
+    renderBtn.disabled = isRendering;
+    renderBtn.textContent = isRendering ? "Rendering…" : "Render Video";
+  }
+
+  // ---------- Slides ----------
+  function addSlide(data = {}) {
+    const idx = slidesEl.querySelectorAll(".slide").length + 1;
+    const wrap = document.createElement("div");
+    wrap.className = "slide";
+    wrap._imageFile = null;
+    wrap._previewObjectUrl = null;
+
+    wrap.innerHTML = `
+      <div class="slide-head">
+        <div class="pill">Slide ${idx}</div>
+        <button class="btn slim danger remove" type="button">Remove</button>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Image</label>
+
+          <div class="drop">
+            <div class="drop-top">
+              <div>
+                <div class="drop-title">Drag & drop an image here</div>
+                <div class="drop-hint">PNG/JPG/WebP recommended • or choose a file</div>
+              </div>
+
+              <div class="drop-actions">
+                <button class="btn slim chooseFile" type="button">Choose file</button>
+                <button class="btn slim danger clearFile" type="button" style="display:none;">Clear</button>
+              </div>
+
+              <input class="imageFile" type="file" accept="image/*" />
+            </div>
+
+            <div class="drop-preview">
+              <span>No image selected</span>
+            </div>
+
+            <div class="url-fallback">
+              <div class="tiny-note">Optional fallback: paste an Image URL instead (for remote images)</div>
+              <input class="imageUrl" type="url" placeholder="https://..." value="${data.imageUrl ? escapeHtml(data.imageUrl) : ""}" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Headline (optional)</label>
+          <input class="headline" type="text" placeholder="Your headline..." value="${data.headline ? escapeHtml(data.headline) : ""}" />
+        </div>
+      </div>
+    `;
+
+    const removeBtn = wrap.querySelector(".remove");
+    removeBtn.addEventListener("click", () => {
+      cleanupSlidePreview(wrap);
+      wrap.remove();
+      relabelSlides();
+      refreshSlideCount();
+    });
+
+    const drop = wrap.querySelector(".drop");
+    const fileInput = wrap.querySelector(".imageFile");
+    const chooseBtn = wrap.querySelector(".chooseFile");
+    const clearBtn = wrap.querySelector(".clearFile");
+    const preview = wrap.querySelector(".drop-preview");
+    const urlInput = wrap.querySelector(".imageUrl");
+
+    chooseBtn.addEventListener("click", () => fileInput.click());
+
+    clearBtn.addEventListener("click", () => {
+      cleanupSlidePreview(wrap);
+      wrap._imageFile = null;
+      fileInput.value = "";
+      clearBtn.style.display = "none";
+      preview.innerHTML = `<span>No image selected</span>`;
+    });
+
+    urlInput.addEventListener("input", () => {
+      if (!wrap._imageFile && urlInput.value.trim()) preview.innerHTML = `<span>Using image URL</span>`;
+      if (!wrap._imageFile && !urlInput.value.trim()) preview.innerHTML = `<span>No image selected</span>`;
+    });
+
+    fileInput.addEventListener("change", () => {
+      const f = fileInput.files && fileInput.files[0];
+      if (!f) return;
+      if (!f.type.startsWith("image/")) {
+        logStatus("❌ Selected file is not an image.");
+        return;
+      }
+      applySlideFile(wrap, f, preview, clearBtn);
+    });
+
+    ["dragenter", "dragover"].forEach(evt =>
+      drop.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        drop.classList.add("dragover");
+      })
+    );
+
+    ["dragleave", "drop"].forEach(evt =>
+      drop.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        drop.classList.remove("dragover");
+      })
+    );
+
+    drop.addEventListener("drop", (e) => {
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!f) return;
+      if (!f.type.startsWith("image/")) {
+        logStatus("❌ Dropped file is not an image.");
+        return;
+      }
+      applySlideFile(wrap, f, preview, clearBtn);
+    });
+
+    slidesEl.appendChild(wrap);
+    refreshSlideCount();
+  }
+
   // ---------- Audio UI ----------
   audioModeEl.addEventListener("change", () => {
     const mode = audioModeEl.value;
     uploadBox.style.display = (mode === "upload") ? "block" : "none";
     recordBox.style.display = (mode === "record") ? "block" : "none";
 
-    // reset state when switching modes
     recordedBlob = null;
     recPreview.style.display = "none";
     recPreview.src = "";
   });
 
-  // Recorder
   recStartBtn.addEventListener("click", async () => {
     try {
       recordedBlob = null;
@@ -595,14 +876,12 @@
       };
 
       recorder.onstop = () => {
-        // Most browsers produce webm/opus; your API normalizes to AAC, so it’s fine.
         recordedBlob = new Blob(recChunks, { type: recorder.mimeType || "audio/webm" });
 
         const url = URL.createObjectURL(recordedBlob);
         recPreview.src = url;
         recPreview.style.display = "block";
 
-        // stop tracks
         recStream.getTracks().forEach(t => t.stop());
         recStream = null;
 
@@ -614,7 +893,7 @@
       recStopBtn.disabled = false;
       logStatus("🎙️ Recording…");
     } catch (err) {
-      logStatus("❌ Mic access failed: " + err);
+      logStatus("❌ Mic access failed: " + (err && err.message ? err.message : String(err)));
     }
   });
 
@@ -628,11 +907,13 @@
   // ---------- Slide buttons ----------
   el("addSlide").addEventListener("click", () => addSlide());
   el("clearSlides").addEventListener("click", () => {
+    [...slidesEl.querySelectorAll(".slide")].forEach(s => cleanupSlidePreview(s));
     slidesEl.innerHTML = "";
     refreshSlideCount();
   });
 
   el("loadDemo").addEventListener("click", () => {
+    [...slidesEl.querySelectorAll(".slide")].forEach(s => cleanupSlidePreview(s));
     slidesEl.innerHTML = "";
     addSlide({ imageUrl: "https://picsum.photos/seed/one/1080/1920", headline: "Slide one headline" });
     addSlide({ imageUrl: "https://picsum.photos/seed/two/1080/1920", headline: "Slide two headline" });
@@ -644,13 +925,17 @@
   // ---------- Render ----------
   el("renderBtn").addEventListener("click", async () => {
     try {
+      setRenderingState(true);
+
       const apiBase = el("apiBase").value.trim().replace(/\/+$/, "");
-      const payload = buildPayload();
-      validateBeforeSend(payload);
+      const ui = buildUiState();
+      validateBeforeSend(ui);
+
+      ui.slides = await uploadSlideImagesToN8n(ui.slides);
+      const payload = toApiPayload(ui);
 
       const mode = audioModeEl.value;
 
-      // Decide endpoint + payload type
       if (mode === "none") {
         const url = apiBase + "/render";
         await postAndDownloadMp4(url, {
@@ -661,7 +946,6 @@
         return;
       }
 
-      // multipart for upload/record
       const url = apiBase + "/render-upload";
       const fd = new FormData();
       fd.append("payload", JSON.stringify(payload));
@@ -672,7 +956,6 @@
         fd.append("audio", file, file.name);
       } else if (mode === "record") {
         if (!recordedBlob) throw new Error("Audio mode is Record but no recording exists yet.");
-        // Give it a filename; backend will handle the codec
         fd.append("audio", recordedBlob, "recording.webm");
       }
 
@@ -682,7 +965,9 @@
       });
 
     } catch (err) {
-      logStatus("❌ " + (err?.message || err));
+      logStatus("❌ " + (err && err.message ? err.message : String(err)));
+    } finally {
+      setRenderingState(false);
     }
   });
 
