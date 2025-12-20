@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Video Renderer — Control Room</title>
+  <style>
+    :root{
+      --card-bg: rgba(10, 18, 32, 0.70);
+      --card-border: rgba(255,255,255,0.12);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.70);
+      --accent: rgba(99, 179, 237, 0.95);
+      --danger: rgba(248, 113, 113, 0.95);
+      --ok: rgba(74, 222, 128, 0.95);
+      --shadow: 0 20px 60px rgba(0,0,0,0.35);
+      --radius: 18px;
+      --gap: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        linear-gradient(180deg, rgba(7,12,22,0.55), rgba(7,12,22,0.75)),
+        url("background.png") center/cover no-repeat fixed;
+      overflow-x: hidden;
+    }
+
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 32px 18px 60px;
+    }
+
+    header {
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(22px, 3vw, 34px);
+      letter-spacing: 0.4px;
+    }
+    .sub {
+      margin: 6px 0 0;
+      color: var(--muted);
+      max-width: 64ch;
+      line-height: 1.35;
+      font-size: 14px;
+    }
+
+    .grid {
+      display:grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 16px;
+      align-items:start;
+    }
+
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      padding: 16px;
+    }
+
+    .row {
+      display:flex;
+      gap: var(--gap);
+      flex-wrap: wrap;
+    }
+
+    label {
+      display:block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"], input[type="number"], input[type="url"], select, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 10px;
+      outline: none;
+    }
+
+    textarea { min-height: 64px; resize: vertical; }
+
+    input[type="file"]{
+      width: 100%;
+      color: var(--muted);
+    }
+
+    .field {
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .field.small { min-width: 160px; flex: 0.6; }
+    .field.tiny  { min-width: 120px; flex: 0.4; }
+
+    .slides {
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .slide {
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 14px;
+      padding: 10px;
+      background: rgba(255,255,255,0.05);
+    }
+
+    .slide-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .pill {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: rgba(255,255,255,0.85);
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 5px 10px;
+      border-radius: 999px;
+    }
+
+    .btn {
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform .05s ease, background .15s ease, border-color .15s ease;
+      user-select: none;
+      font-weight: 600;
+    }
+    .btn:hover { background: rgba(255,255,255,0.12); }
+    .btn:active { transform: translateY(1px); }
+
+    .btn.primary {
+      background: rgba(99,179,237,0.22);
+      border-color: rgba(99,179,237,0.45);
+    }
+
+    .btn.danger {
+      background: rgba(248,113,113,0.16);
+      border-color: rgba(248,113,113,0.45);
+    }
+
+    .btn.ok {
+      background: rgba(74,222,128,0.16);
+      border-color: rgba(74,222,128,0.45);
+    }
+
+    .btn.slim { padding: 7px 10px; font-size: 13px; }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .status {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: rgba(255,255,255,0.78);
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 12px;
+      padding: 10px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 90px;
+    }
+
+    .toggle {
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+    }
+    .toggle input { transform: scale(1.2); }
+
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,0.10);
+      margin: 14px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Video Renderer — Control Room</h1>
+        <p class="sub">Feed 4–25 image URLs + optional headlines, choose a style, optionally upload or record audio, and get back an MP4. This page talks to your FastAPI renderer.</p>
+      </div>
+      <div class="pill">v1 UI</div>
+    </header>
+
+    <div class="grid">
+      <!-- LEFT: Slides + Controls -->
+      <div class="card">
+        <div class="row">
+          <div class="field">
+            <label>API Base URL</label>
+            <input id="apiBase" type="url" value="http://localhost:8000" />
+            <div class="hint" style="margin-top:6px;">Use <span class="pill">http://localhost:8000</span> locally, or your public domain if deployed.</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <div class="field small">
+            <label>Format</label>
+            <select id="format">
+              <option value="reel">reel (1080×1920)</option>
+              <option value="square">square (1080×1080)</option>
+              <option value="linkedin">linkedin (1080×1350)</option>
+            </select>
+          </div>
+
+          <div class="field small">
+            <label>Style</label>
+            <select id="style">
+              <option value="dark_lab">dark_lab</option>
+              <option value="clean_medical">clean_medical</option>
+              <option value="energetic">energetic</option>
+            </select>
+          </div>
+
+          <div class="field small">
+            <label>Transition</label>
+            <select id="transition">
+              <option value="fade">fade</option>
+              <option value="wipeleft">wipeleft</option>
+              <option value="wiperight">wiperight</option>
+              <option value="slideleft">slideleft</option>
+              <option value="slideright">slideright</option>
+            </select>
+          </div>
+
+          <div class="field tiny">
+            <label>FPS</label>
+            <input id="fps" type="number" min="1" max="60" value="30" />
+          </div>
+
+          <div class="field tiny">
+            <label>Duration (sec)</label>
+            <input id="durationSec" type="number" min="2" value="12" />
+          </div>
+
+          <div class="field tiny">
+            <label>Audio Volume (0..1)</label>
+            <input id="audioVolume" type="number" min="0" max="1" step="0.01" value="0.18" />
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <div class="field">
+            <div class="toggle">
+              <input id="wmOn" type="checkbox" checked />
+              <div>
+                <div style="font-weight:700;">Brand / Watermark</div>
+                <div class="hint">Uses your API defaults; you can expand later with full brand controls.</div>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Logo URL (optional)</label>
+            <input id="logoUrl" type="url" placeholder="https://.../logo.png" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div class="field small">
+            <label>Intro</label>
+            <select id="intro">
+              <option value="true" selected>true</option>
+              <option value="false">false</option>
+            </select>
+          </div>
+          <div class="field small">
+            <label>Outro</label>
+            <select id="outro">
+              <option value="true" selected>true</option>
+              <option value="false">false</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Outro Text</label>
+            <input id="outroText" type="text" value="Follow for more • DM us to automate your content" />
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row" style="justify-content:space-between; align-items:center;">
+          <div class="hint">Slides: <span id="slideCount" class="pill">0</span> (must be 4–25)</div>
+          <div class="row">
+            <button id="addSlide" class="btn slim">+ Add Slide</button>
+            <button id="loadDemo" class="btn slim">Load Demo (4)</button>
+            <button id="clearSlides" class="btn slim danger">Clear</button>
+          </div>
+        </div>
+
+        <div class="slides" id="slides"></div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <button id="renderBtn" class="btn primary" style="flex:1;">Render Video</button>
+        </div>
+
+        <div class="hint" style="margin-top:10px;">
+          Tip: for 25 slides, increase duration (your backend will still try, but the video will be frantic). A comfy rule is ~1.4 seconds/slide.
+        </div>
+      </div>
+
+      <!-- RIGHT: Audio + Status -->
+      <div class="card">
+        <h3 style="margin:0 0 8px;">Audio</h3>
+        <p class="hint" style="margin-top:0;">
+          Choose one:
+          <b>No audio</b>,
+          <b>Upload audio/video</b>,
+          or <b>Record</b> directly in browser.
+        </p>
+
+        <div class="row">
+          <div class="field">
+            <label>Audio Mode</label>
+            <select id="audioMode">
+              <option value="none" selected>None</option>
+              <option value="upload">Upload file (audio or video)</option>
+              <option value="record">Record (mic)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="uploadBox" style="display:none; margin-top:10px;">
+          <label>Upload audio/video file (we’ll extract audio)</label>
+          <input id="audioFile" type="file" accept="audio/*,video/*" />
+          <div class="hint" style="margin-top:8px;">This will call <span class="pill">/render-upload</span>.</div>
+        </div>
+
+        <div id="recordBox" style="display:none; margin-top:10px;">
+          <div class="row">
+            <button id="recStart" class="btn ok" style="flex:1;">Start Recording</button>
+            <button id="recStop" class="btn danger" style="flex:1;" disabled>Stop</button>
+          </div>
+          <audio id="recPreview" controls style="width:100%; margin-top:10px; display:none;"></audio>
+          <div class="hint" style="margin-top:8px;">
+            Recording uses <span class="pill">MediaRecorder</span> and sends the blob as the <span class="pill">audio</span> file field.
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <h3 style="margin:0 0 8px;">Status</h3>
+        <div id="status" class="status">Ready.</div>
+
+        <div class="divider"></div>
+
+        <h3 style="margin:0 0 8px;">Quick rules</h3>
+        <div class="hint">
+          <ul style="margin:0; padding-left:18px; line-height:1.4;">
+            <li>Slides must be <b>4–25</b></li>
+            <li>Each slide needs <b>imageUrl</b></li>
+            <li>Audio upload or recording triggers <b>/render-upload</b></li>
+            <li>No audio triggers <b>/render</b></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ---------- DOM ----------
+  const el = (id) => document.getElementById(id);
+
+  const slidesEl = el("slides");
+  const slideCountEl = el("slideCount");
+  const statusEl = el("status");
+
+  const audioModeEl = el("audioMode");
+  const uploadBox = el("uploadBox");
+  const recordBox = el("recordBox");
+  const audioFileEl = el("audioFile");
+
+  const recStartBtn = el("recStart");
+  const recStopBtn = el("recStop");
+  const recPreview = el("recPreview");
+
+  let recordedBlob = null;
+  let recStream = null;
+  let recorder = null;
+  let recChunks = [];
+
+  // ---------- Helpers ----------
+  function logStatus(msg) {
+    statusEl.textContent = msg;
+  }
+
+  function currentSlides() {
+    const nodes = slidesEl.querySelectorAll(".slide");
+    return [...nodes].map((node) => {
+      const imageUrl = node.querySelector(".imageUrl").value.trim();
+      const headline = node.querySelector(".headline").value.trim();
+      return { imageUrl, headline: headline || null };
+    });
+  }
+
+  function refreshSlideCount() {
+    const count = slidesEl.querySelectorAll(".slide").length;
+    slideCountEl.textContent = String(count);
+  }
+
+  function addSlide(data = {}) {
+    const idx = slidesEl.querySelectorAll(".slide").length + 1;
+    const wrap = document.createElement("div");
+    wrap.className = "slide";
+    wrap.innerHTML = `
+      <div class="slide-head">
+        <div class="pill">Slide ${idx}</div>
+        <button class="btn slim danger remove">Remove</button>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Image URL</label>
+          <input class="imageUrl" type="url" placeholder="https://..." value="${data.imageUrl ? escapeHtml(data.imageUrl) : ""}" />
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Headline (optional)</label>
+          <input class="headline" type="text" placeholder="Your headline..." value="${data.headline ? escapeHtml(data.headline) : ""}" />
+        </div>
+      </div>
+    `;
+    wrap.querySelector(".remove").addEventListener("click", () => {
+      wrap.remove();
+      // Re-label slide numbers
+      [...slidesEl.querySelectorAll(".slide")].forEach((s, i) => {
+        s.querySelector(".pill").textContent = `Slide ${i+1}`;
+      });
+      refreshSlideCount();
+    });
+    slidesEl.appendChild(wrap);
+    refreshSlideCount();
+  }
+
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll("\"","&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function buildPayload() {
+    const slides = currentSlides();
+
+    const fps = Number(el("fps").value);
+    const durationSec = Number(el("durationSec").value);
+    const audioVolume = Number(el("audioVolume").value);
+
+    const payload = {
+      format: el("format").value,
+      style: el("style").value,
+      transition: el("transition").value,
+      durationSec: durationSec,
+      slides: slides.map(s => ({ imageUrl: s.imageUrl, headline: s.headline || undefined })),
+      output: { fps: fps },
+      audioVolume: audioVolume,
+      brand: {
+        watermark: el("wmOn").checked,
+        logoUrl: el("logoUrl").value.trim() || undefined,
+        intro: el("intro").value === "true",
+        outro: el("outro").value === "true",
+        outroText: el("outroText").value.trim() || undefined
+      }
+    };
+
+    return payload;
+  }
+
+  function validateBeforeSend(payload) {
+    if (!Array.isArray(payload.slides) || payload.slides.length < 4 || payload.slides.length > 25) {
+      throw new Error(`Slides must be 4–25. You have ${payload.slides?.length ?? 0}.`);
+    }
+    for (let i = 0; i < payload.slides.length; i++) {
+      const u = (payload.slides[i].imageUrl || "").trim();
+      if (!u) throw new Error(`Slide ${i+1} is missing imageUrl.`);
+    }
+    if (!Number.isFinite(payload.durationSec) || payload.durationSec < 2) {
+      throw new Error("Duration must be at least 2 seconds.");
+    }
+    if (!Number.isFinite(payload.output?.fps) || payload.output.fps < 1 || payload.output.fps > 60) {
+      throw new Error("FPS must be 1–60.");
+    }
+    if (!Number.isFinite(payload.audioVolume) || payload.audioVolume < 0 || payload.audioVolume > 1) {
+      throw new Error("Audio volume must be 0..1.");
+    }
+  }
+
+  async function postAndDownloadMp4(url, fetchOptions) {
+    logStatus("Rendering… (this can take a bit depending on slide count)");
+    const res = await fetch(url, fetchOptions);
+
+    if (!res.ok) {
+      const ct = res.headers.get("content-type") || "";
+      let detail = "";
+      if (ct.includes("application/json")) {
+        const j = await res.json().catch(() => null);
+        detail = j ? JSON.stringify(j, null, 2) : "";
+      } else {
+        detail = await res.text().catch(() => "");
+      }
+      throw new Error(`HTTP ${res.status} ${res.statusText}\n${detail}`);
+    }
+
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    const objectUrl = URL.createObjectURL(blob);
+    a.href = objectUrl;
+    a.download = "video.mp4";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objectUrl);
+
+    logStatus("✅ Done. Downloaded video.mp4");
+  }
+
+  // ---------- Audio UI ----------
+  audioModeEl.addEventListener("change", () => {
+    const mode = audioModeEl.value;
+    uploadBox.style.display = (mode === "upload") ? "block" : "none";
+    recordBox.style.display = (mode === "record") ? "block" : "none";
+
+    // reset state when switching modes
+    recordedBlob = null;
+    recPreview.style.display = "none";
+    recPreview.src = "";
+  });
+
+  // Recorder
+  recStartBtn.addEventListener("click", async () => {
+    try {
+      recordedBlob = null;
+      recChunks = [];
+      recPreview.style.display = "none";
+      recPreview.src = "";
+
+      recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recorder = new MediaRecorder(recStream);
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) recChunks.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        // Most browsers produce webm/opus; your API normalizes to AAC, so it’s fine.
+        recordedBlob = new Blob(recChunks, { type: recorder.mimeType || "audio/webm" });
+
+        const url = URL.createObjectURL(recordedBlob);
+        recPreview.src = url;
+        recPreview.style.display = "block";
+
+        // stop tracks
+        recStream.getTracks().forEach(t => t.stop());
+        recStream = null;
+
+        logStatus(`🎙️ Recorded audio ready (${Math.round(recordedBlob.size/1024)} KB)`);
+      };
+
+      recorder.start();
+      recStartBtn.disabled = true;
+      recStopBtn.disabled = false;
+      logStatus("🎙️ Recording…");
+    } catch (err) {
+      logStatus("❌ Mic access failed: " + err);
+    }
+  });
+
+  recStopBtn.addEventListener("click", () => {
+    if (!recorder) return;
+    recorder.stop();
+    recStartBtn.disabled = false;
+    recStopBtn.disabled = true;
+  });
+
+  // ---------- Slide buttons ----------
+  el("addSlide").addEventListener("click", () => addSlide());
+  el("clearSlides").addEventListener("click", () => {
+    slidesEl.innerHTML = "";
+    refreshSlideCount();
+  });
+
+  el("loadDemo").addEventListener("click", () => {
+    slidesEl.innerHTML = "";
+    addSlide({ imageUrl: "https://picsum.photos/seed/one/1080/1920", headline: "Slide one headline" });
+    addSlide({ imageUrl: "https://picsum.photos/seed/two/1080/1920", headline: "Slide two headline" });
+    addSlide({ imageUrl: "https://picsum.photos/seed/three/1080/1920", headline: "Slide three headline" });
+    addSlide({ imageUrl: "https://picsum.photos/seed/four/1080/1920", headline: "Slide four headline" });
+    refreshSlideCount();
+  });
+
+  // ---------- Render ----------
+  el("renderBtn").addEventListener("click", async () => {
+    try {
+      const apiBase = el("apiBase").value.trim().replace(/\/+$/, "");
+      const payload = buildPayload();
+      validateBeforeSend(payload);
+
+      const mode = audioModeEl.value;
+
+      // Decide endpoint + payload type
+      if (mode === "none") {
+        const url = apiBase + "/render";
+        await postAndDownloadMp4(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        return;
+      }
+
+      // multipart for upload/record
+      const url = apiBase + "/render-upload";
+      const fd = new FormData();
+      fd.append("payload", JSON.stringify(payload));
+
+      if (mode === "upload") {
+        const file = audioFileEl.files && audioFileEl.files[0];
+        if (!file) throw new Error("Audio mode is Upload but no file selected.");
+        fd.append("audio", file, file.name);
+      } else if (mode === "record") {
+        if (!recordedBlob) throw new Error("Audio mode is Record but no recording exists yet.");
+        // Give it a filename; backend will handle the codec
+        fd.append("audio", recordedBlob, "recording.webm");
+      }
+
+      await postAndDownloadMp4(url, {
+        method: "POST",
+        body: fd
+      });
+
+    } catch (err) {
+      logStatus("❌ " + (err?.message || err));
+    }
+  });
+
+  // Initialize with demo slides so the UI isn’t empty
+  el("loadDemo").click();
+</script>
+</body>
+</html>
