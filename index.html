@@ -5,26 +5,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="color-scheme" content="dark" />
   <title>Video Renderer — Control Room</title>
-
   <style>
     :root{
-      --bg0: #070c16;
-      --bg1: #0b1220;
       --card-bg: rgba(10, 18, 32, 0.70);
       --card-border: rgba(255,255,255,0.12);
       --text: rgba(255,255,255,0.92);
       --muted: rgba(255,255,255,0.70);
       --accent: rgba(99, 179, 237, 0.95);
-      --accent2: rgba(167, 139, 250, 0.85);
       --danger: rgba(248, 113, 113, 0.95);
       --ok: rgba(74, 222, 128, 0.95);
-      --shadow: 0 24px 90px rgba(0,0,0,0.42);
+      --shadow: 0 20px 60px rgba(0,0,0,0.35);
       --radius: 18px;
       --gap: 14px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      --focus: 0 0 0 3px rgba(99,179,237,0.18);
-      --ring: rgba(99,179,237,0.55);
     }
 
     * { box-sizing: border-box; }
@@ -35,17 +29,15 @@
       font-family: var(--sans);
       color: var(--text);
       background:
-        radial-gradient(1200px 700px at 15% 10%, rgba(99,179,237,0.16), transparent 50%),
-        radial-gradient(900px 650px at 85% 18%, rgba(167,139,250,0.12), transparent 55%),
-        linear-gradient(180deg, rgba(7,12,22,0.78), rgba(7,12,22,0.88)),
+        linear-gradient(180deg, rgba(7,12,22,0.55), rgba(7,12,22,0.75)),
         url("background.png") center/cover no-repeat fixed;
       overflow-x: hidden;
     }
 
     .wrap {
-      max-width: 1180px;
+      max-width: 1120px;
       margin: 0 auto;
-      padding: 34px 18px 70px;
+      padding: 32px 18px 60px;
     }
 
     header {
@@ -54,22 +46,6 @@
       justify-content:space-between;
       gap: 16px;
       margin-bottom: 18px;
-    }
-
-    .brandline{
-      display:flex;
-      align-items:center;
-      gap: 10px;
-      margin-bottom: 6px;
-    }
-
-    .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      box-shadow: 0 0 0 6px rgba(99,179,237,0.08);
-      flex: 0 0 auto;
     }
 
     h1 {
@@ -81,38 +57,14 @@
     .sub {
       margin: 6px 0 0;
       color: var(--muted);
-      max-width: 72ch;
-      line-height: 1.45;
+      max-width: 64ch;
+      line-height: 1.35;
       font-size: 14px;
-    }
-
-    .top-actions{
-      display:flex;
-      gap: 10px;
-      align-items:center;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .pill {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: rgba(255,255,255,0.88);
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      padding: 6px 10px;
-      border-radius: 999px;
-      white-space: nowrap;
-    }
-
-    .pill.accent {
-      background: rgba(99,179,237,0.18);
-      border-color: rgba(99,179,237,0.35);
     }
 
     .grid {
       display:grid;
-      grid-template-columns: 1.25fr 0.75fr;
+      grid-template-columns: 1.2fr 0.8fr;
       gap: 16px;
       align-items:start;
     }
@@ -120,7 +72,6 @@
     @media (max-width: 980px) {
       .grid { grid-template-columns: 1fr; }
       header { align-items: flex-start; flex-direction: column; }
-      .top-actions { justify-content: flex-start; }
     }
 
     .card {
@@ -130,27 +81,13 @@
       box-shadow: var(--shadow);
       backdrop-filter: blur(10px);
       padding: 16px;
-      position: relative;
-      overflow: hidden;
     }
-
-    .card::before{
-      content:"";
-      position:absolute;
-      inset:-2px;
-      background: radial-gradient(500px 200px at 10% 0%, rgba(99,179,237,0.10), transparent 55%);
-      pointer-events:none;
-    }
-
-    .card > * { position: relative; }
 
     .row {
       display:flex;
       gap: var(--gap);
       flex-wrap: wrap;
     }
-
-    .row.align { align-items: center; justify-content: space-between; }
 
     label {
       display:block;
@@ -167,7 +104,6 @@
       border-radius: 12px;
       padding: 10px 10px;
       outline: none;
-      transition: border-color .15s ease, box-shadow .15s ease, transform .05s ease;
     }
 
     input[type="text"]:focus,
@@ -175,8 +111,8 @@
     input[type="url"]:focus,
     select:focus,
     textarea:focus {
-      border-color: var(--ring);
-      box-shadow: var(--focus);
+      border-color: rgba(99,179,237,0.65);
+      box-shadow: 0 0 0 3px rgba(99,179,237,0.18);
     }
 
     textarea { min-height: 64px; resize: vertical; }
@@ -194,25 +130,36 @@
     .field.small { min-width: 160px; flex: 0.6; }
     .field.tiny  { min-width: 120px; flex: 0.4; }
 
-    .section-title{
+    .slides {
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .slide {
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 14px;
+      padding: 10px;
+      background: rgba(255,255,255,0.05);
+    }
+
+    .slide-head {
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap: 12px;
-      margin: 0 0 10px;
+      gap: 10px;
+      margin-bottom: 8px;
     }
 
-    .section-title h2,
-    .section-title h3{
-      margin:0;
-      font-size: 14px;
-      letter-spacing: 0.2px;
-    }
-
-    .divider {
-      height: 1px;
-      background: rgba(255,255,255,0.10);
-      margin: 14px 0;
+    .pill {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: rgba(255,255,255,0.85);
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 5px 10px;
+      border-radius: 999px;
     }
 
     .btn {
@@ -222,10 +169,9 @@
       padding: 10px 12px;
       border-radius: 12px;
       cursor: pointer;
-      transition: transform .05s ease, background .15s ease, border-color .15s ease, opacity .15s ease, box-shadow .15s ease;
+      transition: transform .05s ease, background .15s ease, border-color .15s ease, opacity .15s ease;
       user-select: none;
-      font-weight: 650;
-      letter-spacing: 0.15px;
+      font-weight: 600;
     }
 
     .btn:hover { background: rgba(255,255,255,0.12); }
@@ -235,11 +181,6 @@
     .btn.primary {
       background: rgba(99,179,237,0.22);
       border-color: rgba(99,179,237,0.45);
-      box-shadow: 0 14px 40px rgba(99,179,237,0.12);
-    }
-
-    .btn.primary:hover{
-      box-shadow: 0 18px 55px rgba(99,179,237,0.16);
     }
 
     .btn.danger {
@@ -252,51 +193,33 @@
       border-color: rgba(74,222,128,0.45);
     }
 
-    .btn.ghost {
-      background: transparent;
-      border-color: rgba(255,255,255,0.14);
-    }
-
     .btn.slim { padding: 7px 10px; font-size: 13px; }
 
     .hint {
       color: var(--muted);
       font-size: 13px;
-      line-height: 1.45;
+      line-height: 1.35;
     }
-
-    .hint b { color: rgba(255,255,255,0.9); }
 
     .status {
       font-family: var(--mono);
       font-size: 12px;
-      color: rgba(255,255,255,0.86);
+      color: rgba(255,255,255,0.78);
       background: rgba(0,0,0,0.25);
       border: 1px solid rgba(255,255,255,0.10);
       border-radius: 12px;
-      padding: 12px;
+      padding: 10px;
       white-space: pre-wrap;
       word-break: break-word;
       min-height: 110px;
     }
 
-    .status.good { border-color: rgba(74,222,128,0.35); box-shadow: 0 0 0 3px rgba(74,222,128,0.10); }
-    .status.bad  { border-color: rgba(248,113,113,0.35); box-shadow: 0 0 0 3px rgba(248,113,113,0.10); }
-    .status.info { border-color: rgba(99,179,237,0.35); box-shadow: 0 0 0 3px rgba(99,179,237,0.10); }
-
-    .toggle {
-      display:flex;
-      align-items:center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.05);
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,0.10);
+      margin: 14px 0;
     }
 
-    .toggle input { transform: scale(1.2); }
-
-    /* --- Drag & Drop image box --- */
     .drop {
       border: 1px dashed rgba(255,255,255,0.22);
       background: rgba(255,255,255,0.04);
@@ -327,9 +250,8 @@
     }
 
     .drop-title {
-      font-weight: 750;
+      font-weight: 700;
       font-size: 13px;
-      letter-spacing: 0.2px;
     }
 
     .drop-hint {
@@ -360,7 +282,6 @@
       justify-content:center;
       color: rgba(255,255,255,0.70);
       font-size: 12px;
-      position: relative;
     }
 
     .drop-preview img {
@@ -379,88 +300,6 @@
       font-size: 12px;
       color: rgba(255,255,255,0.65);
     }
-
-    .slides {
-      display:flex;
-      flex-direction:column;
-      gap: 10px;
-      margin-top: 12px;
-    }
-
-    .slide {
-      border: 1px solid rgba(255,255,255,0.14);
-      border-radius: 14px;
-      padding: 10px;
-      background: rgba(255,255,255,0.05);
-    }
-
-    .slide-head {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 10px;
-      margin-bottom: 8px;
-    }
-
-    .slide-head .right{
-      display:flex;
-      gap: 10px;
-      align-items:center;
-    }
-
-    .kbd {
-      font-family: var(--mono);
-      font-size: 12px;
-      padding: 4px 8px;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(0,0,0,0.22);
-      color: rgba(255,255,255,0.86);
-    }
-
-    .chips {
-      display:flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .chip {
-      font-family: var(--mono);
-      font-size: 12px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.06);
-      color: rgba(255,255,255,0.86);
-      cursor: pointer;
-      user-select: none;
-      transition: background .15s ease, border-color .15s ease, transform .05s ease;
-    }
-
-    .chip:hover { background: rgba(255,255,255,0.10); }
-    .chip:active { transform: translateY(1px); }
-
-    .chip.on {
-      background: rgba(99,179,237,0.18);
-      border-color: rgba(99,179,237,0.36);
-    }
-
-    .footer-note{
-      margin-top: 10px;
-      color: rgba(255,255,255,0.70);
-      font-size: 12px;
-      line-height: 1.4;
-    }
-
-    .two-col{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    @media (max-width: 520px){
-      .two-col{ grid-template-columns: 1fr; }
-    }
   </style>
 </head>
 
@@ -468,49 +307,24 @@
   <div class="wrap">
     <header>
       <div>
-        <div class="brandline">
-          <div class="dot"></div>
-          <div class="pill accent">Control Room</div>
-          <div id="apiBadge" class="pill">API: —</div>
-        </div>
-        <h1>Video Renderer</h1>
-        <p class="sub">Feed 4–25 images + optional headlines, choose output settings, optionally add audio, and download an MP4. This UI only exposes options currently supported by your API.</p>
+        <h1>Video Renderer — Control Room</h1>
+        <p class="sub">Upload 4–25 images (+ optional headlines), optionally upload an MP3, and render an MP4 from your API.</p>
       </div>
-
-      <div class="top-actions">
-        <button id="healthBtn" class="btn ghost slim" type="button">Check /health</button>
-        <button id="copyPayloadBtn" class="btn ghost slim" type="button">Copy Payload</button>
-        <div class="pill">v2 UI</div>
-      </div>
+      <div class="pill">v2 UI</div>
     </header>
 
     <div class="grid">
       <!-- LEFT -->
       <div class="card">
-        <div class="section-title">
-          <h2>Connection</h2>
-          <div class="chips">
-            <div class="chip" id="presetLocal">Local</div>
-            <div class="chip" id="presetProd">Prod</div>
-          </div>
-        </div>
-
         <div class="row">
           <div class="field">
             <label for="apiBase">API Base URL</label>
             <input id="apiBase" type="url" value="http://localhost:8000" />
-            <div class="hint" style="margin-top:6px;">
-              Tip: locally use <span class="kbd">http://localhost:8000</span>. For production, paste your public domain.
-            </div>
+            <div class="hint" style="margin-top:6px;">Local: <span class="pill">http://localhost:8000</span> • Deployed: your domain.</div>
           </div>
         </div>
 
         <div class="divider"></div>
-
-        <div class="section-title">
-          <h2>Render Settings</h2>
-          <div class="hint">Only options the API accepts.</div>
-        </div>
 
         <div class="row">
           <div class="field small">
@@ -541,9 +355,7 @@
               <option value="slideright">slideright</option>
             </select>
           </div>
-        </div>
 
-        <div class="row" style="margin-top:10px;">
           <div class="field tiny">
             <label for="fps">FPS</label>
             <input id="fps" type="number" min="1" max="60" value="30" />
@@ -551,8 +363,7 @@
 
           <div class="field tiny">
             <label for="durationSec">Duration (sec)</label>
-            <input id="durationSec" type="number" min="2" value="14" />
-            <div class="tiny-note" style="margin-top:6px;">Tip: if slides feel fast, raise Duration.</div>
+            <input id="durationSec" type="number" min="2" value="12" />
           </div>
 
           <div class="field tiny">
@@ -563,59 +374,22 @@
 
         <div class="divider"></div>
 
-        <div class="section-title">
-          <h2>Brand</h2>
-          <div class="hint">Minimal brand controls (as implemented).</div>
-        </div>
-
         <div class="row">
           <div class="field">
-            <div class="toggle">
-              <input id="wmOn" type="checkbox" checked />
-              <div>
-                <div style="font-weight:750;">Watermark</div>
-                <div class="hint">Applies watermark if API supports it.</div>
-              </div>
+            <label for="audioMp3">Audio (MP3 upload — optional)</label>
+            <input id="audioMp3" type="file" accept="audio/mpeg,audio/mp3,audio/*" />
+            <div class="hint" style="margin-top:6px;">
+              If you choose an MP3, the UI will call <span class="pill">/render-upload</span> and attach it as <span class="pill">audio</span>.
+              If not, it will call <span class="pill">/render</span>.
             </div>
-          </div>
-
-          <div class="field">
-            <label for="logoUrl">Logo URL (optional)</label>
-            <input id="logoUrl" type="url" placeholder="https://.../logo.png" />
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:10px;">
-          <div class="field small">
-            <label for="intro">Intro</label>
-            <select id="intro">
-              <option value="true" selected>true</option>
-              <option value="false">false</option>
-            </select>
-          </div>
-
-          <div class="field small">
-            <label for="outro">Outro</label>
-            <select id="outro">
-              <option value="true" selected>true</option>
-              <option value="false">false</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="outroText">Outro Text</label>
-            <input id="outroText" type="text" value="Follow for more • DM us to automate your content" />
           </div>
         </div>
 
         <div class="divider"></div>
 
-        <div class="row align">
-          <div class="hint">
-            Slides: <span id="slideCount" class="pill accent">0</span>
-            <span class="tiny-note">• required: 4–25</span>
-          </div>
-          <div class="row" style="gap:10px;">
+        <div class="row" style="justify-content:space-between; align-items:center;">
+          <div class="hint">Slides: <span id="slideCount" class="pill">0</span> (must be 4–25)</div>
+          <div class="row">
             <button id="addSlide" class="btn slim" type="button">+ Add Slide</button>
             <button id="loadDemo" class="btn slim" type="button">Load Demo (4)</button>
             <button id="clearSlides" class="btn slim danger" type="button">Clear</button>
@@ -630,87 +404,27 @@
           <button id="renderBtn" class="btn primary" type="button" style="flex:1;">Render Video</button>
         </div>
 
-        <div class="footer-note">
-          Comfort rule: if you’re reading text on slides, aim for ~<b>3.0–4.0s per slide</b> (increase Duration).
-          You can also reduce slide count if needed.
+        <div class="hint" style="margin-top:10px;">
+          Tip: If you add more slides, increase duration (reading-friendly: ~2.0–3.0 sec per slide).
         </div>
       </div>
 
       <!-- RIGHT -->
       <div class="card">
-        <div class="section-title">
-          <h3>Audio</h3>
-          <div class="pill">/render vs /render-upload</div>
-        </div>
-
-        <p class="hint" style="margin-top:0;">
-          Choose one:
-          <b>No audio</b>,
-          <b>Upload audio/video</b>,
-          or <b>Record</b> directly in browser.
-        </p>
-
-        <div class="row">
-          <div class="field">
-            <label for="audioMode">Audio Mode</label>
-            <select id="audioMode">
-              <option value="none" selected>None</option>
-              <option value="upload">Upload file (audio or video)</option>
-              <option value="record">Record (mic)</option>
-            </select>
-          </div>
-        </div>
-
-        <div id="uploadBox" style="display:none; margin-top:10px;">
-          <label for="audioFile">Upload audio/video file (we’ll extract audio)</label>
-          <input id="audioFile" type="file" accept="audio/*,video/*" />
-          <div class="hint" style="margin-top:8px;">This calls <span class="kbd">/render-upload</span>.</div>
-        </div>
-
-        <div id="recordBox" style="display:none; margin-top:10px;">
-          <div class="row">
-            <button id="recStart" class="btn ok" type="button" style="flex:1;">Start Recording</button>
-            <button id="recStop" class="btn danger" type="button" style="flex:1;" disabled>Stop</button>
-          </div>
-          <audio id="recPreview" controls style="width:100%; margin-top:10px; display:none;"></audio>
-          <div class="hint" style="margin-top:8px;">
-            Sends the recording blob as the <span class="kbd">audio</span> field to <span class="kbd">/render-upload</span>.
-          </div>
-        </div>
+        <h3 style="margin:0 0 8px;">Status</h3>
+        <div id="status" class="status">Ready.</div>
 
         <div class="divider"></div>
 
-        <div class="section-title">
-          <h3>Status</h3>
-          <div class="chips">
-            <div class="chip" id="openDownloads">Open Downloads Tip</div>
-          </div>
-        </div>
-        <div id="status" class="status info">Ready.</div>
-
-        <div class="divider"></div>
-
-        <div class="section-title">
-          <h3>Quick rules</h3>
-          <div class="pill">Validation</div>
-        </div>
-
+        <h3 style="margin:0 0 8px;">Quick rules</h3>
         <div class="hint">
-          <ul style="margin:0; padding-left:18px; line-height:1.5;">
+          <ul style="margin:0; padding-left:18px; line-height:1.4;">
             <li>Slides must be <b>4–25</b></li>
             <li>Each slide needs an <b>image</b> (file or URL)</li>
-            <li>Audio upload or recording uses <b>/render-upload</b></li>
-            <li>No audio uses <b>/render</b></li>
+            <li>MP3 selected → uses <b>/render-upload</b></li>
+            <li>No MP3 → uses <b>/render</b></li>
           </ul>
         </div>
-
-        <div class="divider"></div>
-
-        <div class="section-title">
-          <h3>Payload Preview</h3>
-          <div class="pill">Read-only</div>
-        </div>
-        <div id="payloadPreview" class="status" style="min-height: 220px;">(payload will appear here)</div>
       </div>
     </div>
   </div>
@@ -718,37 +432,16 @@
 <script>
   "use strict";
 
-  // ---------- DOM ----------
   const el = (id) => document.getElementById(id);
 
   const slidesEl = el("slides");
   const slideCountEl = el("slideCount");
   const statusEl = el("status");
-  const payloadPreviewEl = el("payloadPreview");
-  const apiBadgeEl = el("apiBadge");
-
-  const audioModeEl = el("audioMode");
-  const uploadBox = el("uploadBox");
-  const recordBox = el("recordBox");
-  const audioFileEl = el("audioFile");
-
-  const recStartBtn = el("recStart");
-  const recStopBtn = el("recStop");
-  const recPreview = el("recPreview");
   const renderBtn = el("renderBtn");
+  const audioMp3El = el("audioMp3");
 
-  let recordedBlob = null;
-  let recStream = null;
-  let recorder = null;
-  let recChunks = [];
-
-  const N8N_IMAGE_WEBHOOK = "https://erasmus-consulting.app.n8n.cloud/webhook-test/video-render";
-
-  // ---------- Helpers ----------
-  function setStatus(msg, kind = "info") {
+  function logStatus(msg) {
     statusEl.textContent = msg;
-    statusEl.classList.remove("good", "bad", "info");
-    statusEl.classList.add(kind);
   }
 
   function escapeHtml(str) {
@@ -769,7 +462,6 @@
 
   function applySlideFile(slideEl, file, previewEl, clearBtn) {
     cleanupSlidePreview(slideEl);
-
     slideEl._imageFile = file;
     clearBtn.style.display = "inline-block";
 
@@ -805,56 +497,6 @@
     });
   }
 
-  function updateApiBadge() {
-    const apiBase = el("apiBase").value.trim().replace(/\/+$/, "");
-    apiBadgeEl.textContent = apiBase ? `API: ${apiBase}` : "API: —";
-  }
-
-  async function uploadSlideImagesToN8n(slides) {
-    const hasFiles = slides.some(s => s.file);
-    if (!hasFiles) return slides;
-
-    setStatus("⬆️ Uploading images to n8n…", "info");
-
-    const fd = new FormData();
-
-    slides.forEach((s, i) => {
-      if (s.file) {
-        fd.append("files", s.file, s.file.name || `slide_${i+1}.png`);
-      }
-    });
-
-    fd.append("meta", JSON.stringify({
-      count: slides.length,
-      order: slides.map((s, i) => ({ index: i, hasFile: !!s.file }))
-    }));
-
-    const res = await fetch(N8N_IMAGE_WEBHOOK, { method: "POST", body: fd });
-
-    if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      throw new Error(`n8n upload failed: HTTP ${res.status}\n${t}`);
-    }
-
-    const j = await res.json().catch(() => null);
-
-    if (!j || !Array.isArray(j.urls)) {
-      throw new Error(`n8n upload response invalid. Expected { urls: [...] } but got:\n${JSON.stringify(j, null, 2)}`);
-    }
-
-    let fileUrlIdx = 0;
-    const out = slides.map(s => {
-      if (s.file) {
-        const u = j.urls[fileUrlIdx++];
-        if (!u) throw new Error("n8n returned fewer URLs than uploaded files.");
-        return { ...s, imageUrl: u, file: null };
-      }
-      return s;
-    });
-
-    return out;
-  }
-
   function buildUiState() {
     return {
       format: el("format").value,
@@ -864,25 +506,13 @@
       slides: currentSlides(),
       output: { fps: Number(el("fps").value) },
       audioVolume: Number(el("audioVolume").value),
-      brand: {
-        watermark: el("wmOn").checked,
-        logoUrl: el("logoUrl").value.trim() || undefined,
-        intro: el("intro").value === "true",
-        outro: el("outro").value === "true",
-        outroText: el("outroText").value.trim() || undefined
-      }
+      brand: {} // keep minimal; only what API supports safely
     };
   }
 
   function toApiPayload(ui) {
     return {
-      format: ui.format,
-      style: ui.style,
-      transition: ui.transition,
-      durationSec: ui.durationSec,
-      output: ui.output,
-      audioVolume: ui.audioVolume,
-      brand: ui.brand,
+      ...ui,
       slides: ui.slides.map(s => ({
         imageUrl: s.imageUrl,
         headline: s.headline || undefined
@@ -916,20 +546,8 @@
     }
   }
 
-  function updatePayloadPreview() {
-    try {
-      const ui = buildUiState();
-      const payload = toApiPayload(ui);
-      payloadPreviewEl.textContent = JSON.stringify(payload, null, 2);
-      updateApiBadge();
-    } catch {
-      payloadPreviewEl.textContent = "(payload preview unavailable)";
-    }
-  }
-
   async function postAndDownloadMp4(url, fetchOptions) {
-    setStatus("Rendering… (depends on slide count + audio)", "info");
-
+    logStatus("Rendering… (don’t close this tab)");
     const res = await fetch(url, fetchOptions);
 
     if (!res.ok) {
@@ -954,45 +572,12 @@
     a.remove();
     URL.revokeObjectURL(objectUrl);
 
-    setStatus("✅ Done. Downloaded video.mp4", "good");
+    logStatus("✅ Done. Downloaded video.mp4");
   }
 
   function setRenderingState(isRendering) {
     renderBtn.disabled = isRendering;
     renderBtn.textContent = isRendering ? "Rendering…" : "Render Video";
-  }
-
-  async function checkHealth() {
-    try {
-      const apiBase = el("apiBase").value.trim().replace(/\/+$/, "");
-      if (!apiBase) throw new Error("API Base URL is empty.");
-      setStatus("Checking /health…", "info");
-      const res = await fetch(apiBase + "/health");
-      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-      const text = await res.text().catch(() => "");
-      setStatus("✅ /health OK\n" + (text || "(no body)"), "good");
-    } catch (err) {
-      setStatus("❌ " + (err && err.message ? err.message : String(err)), "bad");
-    }
-  }
-
-  async function copyPayload() {
-    try {
-      const ui = buildUiState();
-      const payload = toApiPayload(ui);
-      const txt = JSON.stringify(payload, null, 2);
-      await navigator.clipboard.writeText(txt);
-      setStatus("📋 Payload copied to clipboard.", "good");
-    } catch (err) {
-      setStatus("❌ Copy failed: " + (err && err.message ? err.message : String(err)), "bad");
-    }
-  }
-
-  function openDownloadsTip() {
-    setStatus(
-      "If the file doesn't appear: check your browser downloads tray.\nIn Edge/Chrome: Ctrl+J opens downloads.",
-      "info"
-    );
   }
 
   // ---------- Slides ----------
@@ -1006,10 +591,7 @@
     wrap.innerHTML = `
       <div class="slide-head">
         <div class="pill">Slide ${idx}</div>
-        <div class="right">
-          <span class="tiny-note">Tip: keep text away from edges</span>
-          <button class="btn slim danger remove" type="button">Remove</button>
-        </div>
+        <button class="btn slim danger remove" type="button">Remove</button>
       </div>
 
       <div class="row">
@@ -1020,7 +602,7 @@
             <div class="drop-top">
               <div>
                 <div class="drop-title">Drag & drop an image here</div>
-                <div class="drop-hint">PNG/JPG/WebP recommended • or choose a file</div>
+                <div class="drop-hint">PNG/JPG/WebP • or choose a file</div>
               </div>
 
               <div class="drop-actions">
@@ -1036,7 +618,7 @@
             </div>
 
             <div class="url-fallback">
-              <div class="tiny-note">Optional fallback: paste an Image URL instead (for remote images)</div>
+              <div class="tiny-note">Optional: paste an Image URL instead</div>
               <input class="imageUrl" type="url" placeholder="https://..." value="${data.imageUrl ? escapeHtml(data.imageUrl) : ""}" />
             </div>
           </div>
@@ -1057,7 +639,6 @@
       wrap.remove();
       relabelSlides();
       refreshSlideCount();
-      updatePayloadPreview();
     });
 
     const drop = wrap.querySelector(".drop");
@@ -1066,7 +647,6 @@
     const clearBtn = wrap.querySelector(".clearFile");
     const preview = wrap.querySelector(".drop-preview");
     const urlInput = wrap.querySelector(".imageUrl");
-    const headlineInput = wrap.querySelector(".headline");
 
     chooseBtn.addEventListener("click", () => fileInput.click());
 
@@ -1076,26 +656,21 @@
       fileInput.value = "";
       clearBtn.style.display = "none";
       preview.innerHTML = `<span>No image selected</span>`;
-      updatePayloadPreview();
     });
 
     urlInput.addEventListener("input", () => {
       if (!wrap._imageFile && urlInput.value.trim()) preview.innerHTML = `<span>Using image URL</span>`;
       if (!wrap._imageFile && !urlInput.value.trim()) preview.innerHTML = `<span>No image selected</span>`;
-      updatePayloadPreview();
     });
-
-    headlineInput.addEventListener("input", () => updatePayloadPreview());
 
     fileInput.addEventListener("change", () => {
       const f = fileInput.files && fileInput.files[0];
       if (!f) return;
       if (!f.type.startsWith("image/")) {
-        setStatus("❌ Selected file is not an image.", "bad");
+        logStatus("❌ Selected file is not an image.");
         return;
       }
       applySlideFile(wrap, f, preview, clearBtn);
-      updatePayloadPreview();
     });
 
     ["dragenter", "dragover"].forEach(evt =>
@@ -1118,80 +693,22 @@
       const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
       if (!f) return;
       if (!f.type.startsWith("image/")) {
-        setStatus("❌ Dropped file is not an image.", "bad");
+        logStatus("❌ Dropped file is not an image.");
         return;
       }
       applySlideFile(wrap, f, preview, clearBtn);
-      updatePayloadPreview();
     });
 
     slidesEl.appendChild(wrap);
     refreshSlideCount();
-    updatePayloadPreview();
   }
 
-  // ---------- Audio UI ----------
-  audioModeEl.addEventListener("change", () => {
-    const mode = audioModeEl.value;
-    uploadBox.style.display = (mode === "upload") ? "block" : "none";
-    recordBox.style.display = (mode === "record") ? "block" : "none";
-
-    recordedBlob = null;
-    recPreview.style.display = "none";
-    recPreview.src = "";
-    updatePayloadPreview();
-  });
-
-  recStartBtn.addEventListener("click", async () => {
-    try {
-      recordedBlob = null;
-      recChunks = [];
-      recPreview.style.display = "none";
-      recPreview.src = "";
-
-      recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      recorder = new MediaRecorder(recStream);
-
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) recChunks.push(e.data);
-      };
-
-      recorder.onstop = () => {
-        recordedBlob = new Blob(recChunks, { type: recorder.mimeType || "audio/webm" });
-
-        const url = URL.createObjectURL(recordedBlob);
-        recPreview.src = url;
-        recPreview.style.display = "block";
-
-        recStream.getTracks().forEach(t => t.stop());
-        recStream = null;
-
-        setStatus(`🎙️ Recorded audio ready (${Math.round(recordedBlob.size/1024)} KB)`, "good");
-      };
-
-      recorder.start();
-      recStartBtn.disabled = true;
-      recStopBtn.disabled = false;
-      setStatus("🎙️ Recording…", "info");
-    } catch (err) {
-      setStatus("❌ Mic access failed: " + (err && err.message ? err.message : String(err)), "bad");
-    }
-  });
-
-  recStopBtn.addEventListener("click", () => {
-    if (!recorder) return;
-    recorder.stop();
-    recStartBtn.disabled = false;
-    recStopBtn.disabled = true;
-  });
-
-  // ---------- Buttons ----------
+  // Demo buttons
   el("addSlide").addEventListener("click", () => addSlide());
   el("clearSlides").addEventListener("click", () => {
     [...slidesEl.querySelectorAll(".slide")].forEach(s => cleanupSlidePreview(s));
     slidesEl.innerHTML = "";
     refreshSlideCount();
-    updatePayloadPreview();
   });
 
   el("loadDemo").addEventListener("click", () => {
@@ -1202,108 +719,52 @@
     addSlide({ imageUrl: "https://picsum.photos/seed/three/1080/1920", headline: "Slide three headline" });
     addSlide({ imageUrl: "https://picsum.photos/seed/four/1080/1920", headline: "Slide four headline" });
     refreshSlideCount();
-    updatePayloadPreview();
   });
 
+  // Render
   el("renderBtn").addEventListener("click", async () => {
     try {
       setRenderingState(true);
 
       const apiBase = el("apiBase").value.trim().replace(/\/+$/, "");
-      if (!apiBase) throw new Error("API Base URL is empty.");
-
       const ui = buildUiState();
       validateBeforeSend(ui);
 
-      updatePayloadPreview();
-
-      ui.slides = await uploadSlideImagesToN8n(ui.slides);
       const payload = toApiPayload(ui);
-      payloadPreviewEl.textContent = JSON.stringify(payload, null, 2);
 
-      const mode = audioModeEl.value;
+      // If MP3 selected -> /render-upload with multipart (payload + audio)
+      const mp3 = audioMp3El.files && audioMp3El.files[0];
 
-      if (mode === "none") {
-        const url = apiBase + "/render";
-        await postAndDownloadMp4(url, {
+      if (mp3) {
+        logStatus(`🎧 MP3 selected: ${mp3.name} (${Math.round(mp3.size/1024)} KB)\nUsing /render-upload…`);
+        const fd = new FormData();
+        fd.append("payload", JSON.stringify(payload)); // MUST be string
+        fd.append("audio", mp3, mp3.name);            // MUST be file field named "audio"
+
+        await postAndDownloadMp4(apiBase + "/render-upload", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: fd
         });
         return;
       }
 
-      const url = apiBase + "/render-upload";
-      const fd = new FormData();
-      fd.append("payload", JSON.stringify(payload));
-
-      if (mode === "upload") {
-        const file = audioFileEl.files && audioFileEl.files[0];
-        if (!file) throw new Error("Audio mode is Upload but no file selected.");
-        fd.append("audio", file, file.name);
-      } else if (mode === "record") {
-        if (!recordedBlob) throw new Error("Audio mode is Record but no recording exists yet.");
-        fd.append("audio", recordedBlob, "recording.webm");
-      }
-
-      await postAndDownloadMp4(url, {
+      // No MP3 -> /render with JSON
+      logStatus("No MP3 selected. Using /render…");
+      await postAndDownloadMp4(apiBase + "/render", {
         method: "POST",
-        body: fd
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
       });
 
     } catch (err) {
-      setStatus("❌ " + (err && err.message ? err.message : String(err)), "bad");
+      logStatus("❌ " + (err && err.message ? err.message : String(err)));
     } finally {
       setRenderingState(false);
     }
   });
 
-  // ---------- Top actions ----------
-  el("healthBtn").addEventListener("click", checkHealth);
-  el("copyPayloadBtn").addEventListener("click", copyPayload);
-  el("openDownloads").addEventListener("click", openDownloadsTip);
-
-  // ---------- Presets ----------
-  function setChipState(onId) {
-    const ids = ["presetLocal", "presetProd"];
-    ids.forEach(id => el(id).classList.remove("on"));
-    if (onId) el(onId).classList.add("on");
-  }
-
-  el("presetLocal").addEventListener("click", () => {
-    el("apiBase").value = "http://localhost:8000";
-    setChipState("presetLocal");
-    updateApiBadge();
-    updatePayloadPreview();
-    setStatus("Switched to Local API.", "info");
-  });
-
-  el("presetProd").addEventListener("click", () => {
-    const cur = el("apiBase").value.trim();
-    if (!cur || cur.includes("localhost")) {
-      setStatus("Paste your production domain into API Base URL, then click Prod again.", "info");
-      return;
-    }
-    setChipState("presetProd");
-    updateApiBadge();
-    updatePayloadPreview();
-    setStatus("Using Production API.", "info");
-  });
-
-  // ---------- Live preview updates ----------
-  ["apiBase","format","style","transition","durationSec","fps","audioVolume","wmOn","logoUrl","intro","outro","outroText"]
-    .forEach(id => {
-      const node = el(id);
-      if (!node) return;
-      node.addEventListener("input", updatePayloadPreview);
-      node.addEventListener("change", updatePayloadPreview);
-    });
-
-  // Init
-  updateApiBadge();
+  // init
   el("loadDemo").click();
-  setChipState("presetLocal");
-  updatePayloadPreview();
 </script>
 </body>
 </html>
