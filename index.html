@@ -120,11 +120,7 @@
       color: var(--muted);
     }
 
-    .field {
-      flex: 1;
-      min-width: 220px;
-    }
-
+    .field { flex: 1; min-width: 220px; }
     .field.small { min-width: 160px; flex: 0.6; }
     .field.tiny  { min-width: 120px; flex: 0.4; }
 
@@ -240,23 +236,9 @@
       flex-wrap: wrap;
     }
 
-    .drop-title {
-      font-weight: 700;
-      font-size: 13px;
-    }
-
-    .drop-hint {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.35;
-    }
-
-    .drop-actions {
-      display:flex;
-      gap: 10px;
-      align-items:center;
-    }
-
+    .drop-title { font-weight: 700; font-size: 13px; }
+    .drop-hint { color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .drop-actions { display:flex; gap: 10px; align-items:center; }
     .drop input[type="file"] { display: none; }
 
     .drop-preview {
@@ -280,15 +262,8 @@
       display:block;
     }
 
-    .url-fallback {
-      display:grid;
-      gap: 6px;
-    }
-
-    .tiny-note {
-      font-size: 12px;
-      color: rgba(255,255,255,0.65);
-    }
+    .url-fallback { display:grid; gap: 6px; }
+    .tiny-note { font-size: 12px; color: rgba(255,255,255,0.65); }
   </style>
 </head>
 
@@ -299,7 +274,7 @@
         <h1>Video Renderer — Control Room</h1>
         <p class="sub">Upload 4–25 images (+ optional headlines), optionally upload an MP3, and render an MP4 from your API.</p>
       </div>
-      <div class="pill">v3 UI</div>
+      <div class="pill">v3 UI (fixed)</div>
     </header>
 
     <div class="grid">
@@ -313,10 +288,10 @@
           </div>
 
           <div class="field">
-            <label for="n8nWebhook">Image Upload Webhook (n8n)</label>
+            <label for="n8nWebhook">Media Upload Webhook (n8n)</label>
             <input id="n8nWebhook" type="url" value="https://erasmus-consulting.app.n8n.cloud/webhook-test/video-render" />
             <div class="hint" style="margin-top:6px;">
-              This is <b>STEP 1</b>: local image files must be uploaded here first so we get back image URLs.
+              STEP 1: local image files (and MP3 if selected) are uploaded here first. n8n should return URLs.
             </div>
           </div>
         </div>
@@ -376,8 +351,8 @@
             <label for="audioMp3">Audio (MP3 upload — optional)</label>
             <input id="audioMp3" type="file" accept="audio/mpeg,audio/mp3,audio/*" />
             <div class="hint" style="margin-top:6px;">
-              MP3 selected → uses <span class="pill">/render-upload</span> (multipart: payload + <b>audio</b>).<br/>
-              No MP3 → uses <span class="pill">/render</span> (JSON only).
+              If MP3 selected: it will be uploaded to n8n in STEP 1 as form field <span class="pill">audio</span>.
+              Rendering still happens via your API afterwards.
             </div>
           </div>
         </div>
@@ -400,10 +375,6 @@
         <div class="row">
           <button id="renderBtn" class="btn primary" type="button" style="flex:1;">Render Video</button>
         </div>
-
-        <div class="hint" style="margin-top:10px;">
-          Tip: If you add more slides, increase duration (reading-friendly: ~2.0–3.0 sec per slide).
-        </div>
       </div>
 
       <!-- RIGHT -->
@@ -417,10 +388,9 @@
         <div class="hint">
           <ul style="margin:0; padding-left:18px; line-height:1.4;">
             <li>Slides must be <b>4–25</b></li>
-            <li>Each slide needs an <b>file</b> or <b>URL</b></li>
-            <li>If any slide uses a <b>file</b> → STEP 1 uploads to n8n to get URLs</li>
-            <li>MP3 selected → uses <b>/render-upload</b></li>
-            <li>No MP3 → uses <b>/render</b></li>
+            <li>Each slide needs a <b>file</b> or <b>URL</b></li>
+            <li>If any slide uses a <b>file</b> → STEP 1 uploads files to n8n to get URLs</li>
+            <li>If MP3 selected → STEP 1 uploads it to n8n as <b>audio</b></li>
           </ul>
         </div>
       </div>
@@ -438,9 +408,7 @@
   const renderBtn = el("renderBtn");
   const audioMp3El = el("audioMp3");
 
-  function logStatus(msg) {
-    statusEl.textContent = msg;
-  }
+  function logStatus(msg) { statusEl.textContent = msg; }
 
   function escapeHtml(str) {
     return String(str)
@@ -474,18 +442,12 @@
       const headline = node.querySelector(".headline").value.trim();
       const file = node._imageFile || null;
       const imageUrl = node.querySelector(".imageUrl").value.trim();
-
-      return {
-        imageUrl: imageUrl || "",
-        headline: headline || null,
-        file: file
-      };
+      return { imageUrl: imageUrl || "", headline: headline || null, file };
     });
   }
 
   function refreshSlideCount() {
-    const count = slidesEl.querySelectorAll(".slide").length;
-    slideCountEl.textContent = String(count);
+    slideCountEl.textContent = String(slidesEl.querySelectorAll(".slide").length);
   }
 
   function relabelSlides() {
@@ -504,7 +466,7 @@
       slides: currentSlides(),
       output: { fps: Number(el("fps").value) },
       audioVolume: Number(el("audioVolume").value),
-      brand: {} // keep minimal; only what API supports safely
+      brand: {}
     };
   }
 
@@ -522,41 +484,35 @@
     if (!Array.isArray(uiState.slides) || uiState.slides.length < 4 || uiState.slides.length > 25) {
       throw new Error(`Slides must be 4–25. You have ${uiState.slides?.length ?? 0}.`);
     }
-
     for (let i = 0; i < uiState.slides.length; i++) {
       const hasUrl = (uiState.slides[i].imageUrl || "").trim().length > 0;
       const hasFile = !!uiState.slides[i].file;
-      if (!hasUrl && !hasFile) {
-        throw new Error(`Slide ${i+1} needs an image (drop a file or paste URL).`);
-      }
+      if (!hasUrl && !hasFile) throw new Error(`Slide ${i+1} needs an image (file or URL).`);
     }
-
-    if (!Number.isFinite(uiState.durationSec) || uiState.durationSec < 2) {
-      throw new Error("Duration must be at least 2 seconds.");
-    }
-
-    if (!Number.isFinite(uiState.output?.fps) || uiState.output.fps < 1 || uiState.output.fps > 60) {
-      throw new Error("FPS must be 1–60.");
-    }
-
-    if (!Number.isFinite(uiState.audioVolume) || uiState.audioVolume < 0 || uiState.audioVolume > 1) {
-      throw new Error("Audio volume must be 0..1.");
-    }
+    if (!Number.isFinite(uiState.durationSec) || uiState.durationSec < 2) throw new Error("Duration must be at least 2 seconds.");
+    if (!Number.isFinite(uiState.output?.fps) || uiState.output.fps < 1 || uiState.output.fps > 60) throw new Error("FPS must be 1–60.");
+    if (!Number.isFinite(uiState.audioVolume) || uiState.audioVolume < 0 || uiState.audioVolume > 1) throw new Error("Audio volume must be 0..1.");
   }
 
-  // ---------------- STEP 1: Upload slide image FILES to n8n, get URLs back ----------------
-  async function uploadSlideImagesToN8n(slides) {
-    const hasFiles = slides.some(s => s.file);
-    if (!hasFiles) return slides;
-
+  // ✅ STEP 1: Upload BOTH (image files + optional MP3) to n8n
+  // n8n should return { urls: [ ...imageUrls... ], audioReceived: true/false, audioName: "...", audioUrl?: "..." }
+  async function uploadMediaToN8n({ slides, audioFile }) {
     const webhook = el("n8nWebhook").value.trim();
-    if (!webhook) throw new Error("You used local image files, but Image Upload Webhook (n8n) is empty.");
+    if (!webhook) throw new Error("Media Upload Webhook (n8n) is empty.");
 
-    logStatus("⬆️ STEP 1: Uploading slide image files to n8n…");
+    const hasImageFiles = slides.some(s => s.file);
+    const hasAudio = !!audioFile;
+
+    if (!hasImageFiles && !hasAudio) {
+      // Nothing to upload
+      return { slides, n8n: null };
+    }
+
+    logStatus("⬆️ STEP 1: Uploading media to n8n (images + audio if selected)…");
 
     const fd = new FormData();
 
-    // We upload only file-based slides, in order
+    // Append images under "files" (matches your current n8n workflow)
     const fileSlides = [];
     slides.forEach((s, i) => {
       if (s.file) {
@@ -565,11 +521,15 @@
       }
     });
 
-    // Optional meta (nice for debugging in n8n)
+    // Append audio under "audio"
+    if (audioFile) {
+      fd.append("audio", audioFile, audioFile.name || "audio.mp3");
+    }
+
     fd.append("meta", JSON.stringify({
       totalSlides: slides.length,
-      uploadedCount: fileSlides.length,
-      fileIndices: fileSlides.map(x => x.index),
+      uploadedImages: fileSlides.length,
+      hasAudio,
     }));
 
     const res = await fetch(webhook, { method: "POST", body: fd });
@@ -580,22 +540,29 @@
     }
 
     const j = await res.json().catch(() => null);
-    if (!j || !Array.isArray(j.urls)) {
-      throw new Error(`n8n upload response invalid. Expected { urls: [...] } but got:\n${JSON.stringify(j, null, 2)}`);
-    }
-    if (j.urls.length !== fileSlides.length) {
-      throw new Error(`n8n returned ${j.urls.length} urls but we uploaded ${fileSlides.length} files.`);
+    if (!j) throw new Error("n8n upload response was not JSON.");
+
+    // If n8n returns image URLs, apply them
+    if (fileSlides.length > 0) {
+      if (!Array.isArray(j.urls)) {
+        throw new Error(`n8n response invalid. Expected { urls:[...] } but got:\n${JSON.stringify(j, null, 2)}`);
+      }
+      if (j.urls.length !== fileSlides.length) {
+        throw new Error(`n8n returned ${j.urls.length} urls but we uploaded ${fileSlides.length} image files.`);
+      }
+
+      const outSlides = slides.map(s => ({ ...s }));
+      fileSlides.forEach((x, k) => {
+        outSlides[x.index].imageUrl = j.urls[k];
+        outSlides[x.index].file = null;
+      });
+
+      logStatus(`✅ STEP 1: n8n returned ${j.urls.length} image URLs.${hasAudio ? " Audio uploaded too." : ""}`);
+      return { slides: outSlides, n8n: j };
     }
 
-    // Replace each file slide with returned URL
-    const out = slides.map(s => ({ ...s }));
-    fileSlides.forEach((x, k) => {
-      out[x.index].imageUrl = j.urls[k];
-      out[x.index].file = null;
-    });
-
-    logStatus("✅ STEP 1: n8n returned URLs. Continuing to render…");
-    return out;
+    logStatus(`✅ STEP 1: n8n received audio.${hasImageFiles ? " (No image files uploaded)" : ""}`);
+    return { slides, n8n: j };
   }
 
   async function postAndDownloadMp4(url, fetchOptions) {
@@ -604,13 +571,9 @@
 
     if (!res.ok) {
       const ct = res.headers.get("content-type") || "";
-      let detail = "";
-      if (ct.includes("application/json")) {
-        const j = await res.json().catch(() => null);
-        detail = j ? JSON.stringify(j, null, 2) : "";
-      } else {
-        detail = await res.text().catch(() => "");
-      }
+      const detail = ct.includes("application/json")
+        ? JSON.stringify(await res.json().catch(() => null), null, 2)
+        : await res.text().catch(() => "");
       throw new Error(`HTTP ${res.status} ${res.statusText}\n${detail}`);
     }
 
@@ -632,7 +595,6 @@
     renderBtn.textContent = isRendering ? "Rendering…" : "Render Video";
   }
 
-  // ---------- Slides ----------
   function addSlide(data = {}) {
     const idx = slidesEl.querySelectorAll(".slide").length + 1;
     const wrap = document.createElement("div");
@@ -685,8 +647,7 @@
       </div>
     `;
 
-    const removeBtn = wrap.querySelector('[data-action="remove"]');
-    removeBtn.addEventListener("click", () => {
+    wrap.querySelector('[data-action="remove"]').addEventListener("click", () => {
       cleanupSlidePreview(wrap);
       wrap.remove();
       relabelSlides();
@@ -718,25 +679,19 @@
     fileInput.addEventListener("change", () => {
       const f = fileInput.files && fileInput.files[0];
       if (!f) return;
-      if (!f.type.startsWith("image/")) {
-        logStatus("❌ Selected file is not an image.");
-        return;
-      }
+      if (!f.type.startsWith("image/")) { logStatus("❌ Selected file is not an image."); return; }
       applySlideFile(wrap, f, preview, clearBtn);
     });
 
     ["dragenter", "dragover"].forEach(evt =>
       drop.addEventListener(evt, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
         drop.classList.add("dragover");
       })
     );
-
     ["dragleave", "drop"].forEach(evt =>
       drop.addEventListener(evt, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
         drop.classList.remove("dragover");
       })
     );
@@ -744,10 +699,7 @@
     drop.addEventListener("drop", (e) => {
       const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
       if (!f) return;
-      if (!f.type.startsWith("image/")) {
-        logStatus("❌ Dropped file is not an image.");
-        return;
-      }
+      if (!f.type.startsWith("image/")) { logStatus("❌ Dropped file is not an image."); return; }
       applySlideFile(wrap, f, preview, clearBtn);
     });
 
@@ -755,14 +707,12 @@
     refreshSlideCount();
   }
 
-  // Buttons
   el("addSlide").addEventListener("click", () => addSlide());
   el("clearSlides").addEventListener("click", () => {
     [...slidesEl.querySelectorAll(".slide")].forEach(s => cleanupSlidePreview(s));
     slidesEl.innerHTML = "";
     refreshSlideCount();
   });
-
   el("loadDemo").addEventListener("click", () => {
     [...slidesEl.querySelectorAll(".slide")].forEach(s => cleanupSlidePreview(s));
     slidesEl.innerHTML = "";
@@ -773,7 +723,6 @@
     refreshSlideCount();
   });
 
-  // Render
   el("renderBtn").addEventListener("click", async () => {
     try {
       setRenderingState(true);
@@ -784,33 +733,28 @@
       let ui = buildUiState();
       validateBeforeSend(ui);
 
-      // STEP 1: if there are file-based slides, upload to n8n -> get URLs
-      ui.slides = await uploadSlideImagesToN8n(ui.slides);
-
-      // Payload must contain imageUrl strings
-      const payload = toApiPayload(ui);
-
       const mp3 = audioMp3El.files && audioMp3El.files[0];
 
-      if (mp3) {
-        logStatus(
-          `🎧 MP3 selected: ${mp3.name} (${Math.round(mp3.size/1024)} KB)\n` +
-          `➡ Calling: ${apiBase}/render-upload\n` +
-          `FormData fields: payload + audio`
-        );
+      // ✅ STEP 1: upload media (images + optional mp3) to n8n
+      const step1 = await uploadMediaToN8n({ slides: ui.slides, audioFile: mp3 });
+      ui.slides = step1.slides;
 
+      const payload = toApiPayload(ui);
+
+      // Rendering still uses your API:
+      // - If mp3 selected, we attach it as file to /render-upload.
+      // (n8n now also receives it so you can evolve to "n8n renders" later.)
+      if (mp3) {
+        logStatus("➡ Rendering via API /render-upload (payload + audio file)…");
         const fd = new FormData();
         fd.append("payload", JSON.stringify(payload));
         fd.append("audio", mp3, mp3.name);
 
-        await postAndDownloadMp4(apiBase + "/render-upload", {
-          method: "POST",
-          body: fd
-        });
+        await postAndDownloadMp4(apiBase + "/render-upload", { method: "POST", body: fd });
         return;
       }
 
-      logStatus(`No MP3 selected.\n➡ Calling: ${apiBase}/render (JSON)`);
+      logStatus("➡ Rendering via API /render (JSON)…");
       await postAndDownloadMp4(apiBase + "/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -824,7 +768,6 @@
     }
   });
 
-  // init
   el("loadDemo").click();
 </script>
 </body>
