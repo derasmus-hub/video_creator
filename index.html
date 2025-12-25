@@ -160,6 +160,7 @@
       border: 1px solid rgba(255,255,255,0.12);
       padding: 5px 10px;
       border-radius: 999px;
+      white-space: nowrap;
     }
 
     .btn {
@@ -266,9 +267,7 @@
       align-items:center;
     }
 
-    .drop input[type="file"] {
-      display: none;
-    }
+    .drop input[type="file"] { display: none; }
 
     .drop-preview {
       width: 100%;
@@ -321,6 +320,19 @@
             <label for="apiBase">API Base URL</label>
             <input id="apiBase" type="url" value="http://localhost:8000" />
             <div class="hint" style="margin-top:6px;">Local: <span class="pill">http://localhost:8000</span> • Deployed: your domain.</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <div class="field">
+            <label for="n8nImagesWebhook">n8n Image Upload Webhook (NEW)</label>
+            <input id="n8nImagesWebhook" type="url" value="https://erasmus-consulting.app.n8n.cloud/webhook/video-images" />
+            <div class="hint" style="margin-top:6px;">
+              This must be a <b>dedicated</b> webhook that accepts image files and returns <span class="pill">{ urls: [...] }</span>.
+              (Do NOT use your <span class="pill">video-render</span> webhook here.)
+            </div>
           </div>
         </div>
 
@@ -421,6 +433,7 @@
           <ul style="margin:0; padding-left:18px; line-height:1.4;">
             <li>Slides must be <b>4–25</b></li>
             <li>Each slide needs an <b>image</b> (file or URL)</li>
+            <li>If a slide uses a <b>file</b>, it will upload to n8n first and convert to a URL</li>
             <li>MP3 selected → uses <b>/render-upload</b></li>
             <li>No MP3 → uses <b>/render</b></li>
           </ul>
@@ -544,6 +557,57 @@
     if (!Number.isFinite(uiState.audioVolume) || uiState.audioVolume < 0 || uiState.audioVolume > 1) {
       throw new Error("Audio volume must be 0..1.");
     }
+  }
+
+  // -------- NEW: upload slide image FILES to n8n and return urls[] ----------
+  async function uploadSlideImagesToN8n(slides) {
+    const hasFiles = slides.some(s => s.file);
+    if (!hasFiles) return slides;
+
+    const webhookUrl = el("n8nImagesWebhook").value.trim();
+    if (!webhookUrl) throw new Error("n8n Image Upload Webhook is empty.");
+
+    logStatus("⬆️ Uploading slide images to n8n…");
+
+    // IMPORTANT: n8n webhook should be configured with Binary field name = "file"
+    const fd = new FormData();
+    slides.forEach((s, i) => {
+      if (s.file) {
+        fd.append("file", s.file, s.file.name || `slide_${i+1}.png`);
+      }
+    });
+
+    // optional metadata (helps debugging on n8n side)
+    fd.append("meta", JSON.stringify({
+      count: slides.length,
+      order: slides.map((s, i) => ({ index: i, hasFile: !!s.file }))
+    }));
+
+    const res = await fetch(webhookUrl, { method: "POST", body: fd });
+
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      throw new Error(`n8n image upload failed: HTTP ${res.status}\n${t}`);
+    }
+
+    const j = await res.json().catch(() => null);
+    if (!j || !Array.isArray(j.urls)) {
+      throw new Error(
+        `n8n upload response invalid. Expected { urls: [...] } but got:\n${JSON.stringify(j, null, 2)}`
+      );
+    }
+
+    // Replace each file slide with a returned URL (in the same order as appended)
+    let idx = 0;
+    const out = slides.map((s) => {
+      if (!s.file) return s;
+      const url = j.urls[idx++];
+      if (!url) throw new Error("n8n returned fewer URLs than uploaded files.");
+      return { ...s, imageUrl: url, file: null };
+    });
+
+    logStatus("✅ Slides uploaded to n8n. URLs attached to payload.");
+    return out;
   }
 
   async function postAndDownloadMp4(url, fetchOptions) {
@@ -727,8 +791,13 @@
       setRenderingState(true);
 
       const apiBase = el("apiBase").value.trim().replace(/\/+$/, "");
+      if (!apiBase) throw new Error("API Base URL is empty.");
+
       const ui = buildUiState();
       validateBeforeSend(ui);
+
+      // NEW: If any slide has a FILE, upload those files to the dedicated n8n image webhook first
+      ui.slides = await uploadSlideImagesToN8n(ui.slides);
 
       const payload = toApiPayload(ui);
 
