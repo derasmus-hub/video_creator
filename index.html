@@ -264,6 +264,65 @@
 
     .url-fallback { display:grid; gap: 6px; }
     .tiny-note { font-size: 12px; color: rgba(255,255,255,0.65); }
+
+    /* NEW: toggle rows */
+    .toggle-row {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 10px 12px;
+      flex: 1;
+      min-width: 220px;
+    }
+    .toggle-left { display:flex; flex-direction:column; gap: 2px; }
+    .toggle-title { font-weight: 700; font-size: 13px; }
+    .toggle-sub { font-size: 12px; color: rgba(255,255,255,0.70); line-height: 1.25; }
+
+    .switch {
+      position: relative;
+      width: 46px;
+      height: 28px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.14);
+      flex: 0 0 auto;
+      cursor: pointer;
+      transition: background .15s ease, border-color .15s ease;
+    }
+    .switch[data-on="true"] {
+      background: rgba(74,222,128,0.22);
+      border-color: rgba(74,222,128,0.40);
+    }
+    .knob {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.88);
+      transition: transform .15s ease;
+    }
+    .switch[data-on="true"] .knob { transform: translateX(18px); }
+
+    .inline-note {
+      font-size: 12px;
+      color: rgba(255,255,255,0.68);
+      margin-top: 6px;
+      line-height: 1.3;
+    }
+
+    .brand-adv {
+      display:grid;
+      gap: 10px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,0.10);
+    }
   </style>
 </head>
 
@@ -274,7 +333,7 @@
         <h1>Video Renderer — Control Room</h1>
         <p class="sub">Upload 4–25 images (+ optional headlines), optionally upload an MP3, and render an MP4 from your API.</p>
       </div>
-      <div class="pill">v3 UI (fixed)</div>
+      <div class="pill">v3 UI (fixed + branding toggles)</div>
     </header>
 
     <div class="grid">
@@ -346,6 +405,67 @@
 
         <div class="divider"></div>
 
+        <!-- NEW: Branding toggles -->
+        <div class="row">
+          <div class="toggle-row">
+            <div class="toggle-left">
+              <div class="toggle-title">Watermark (logo)</div>
+              <div class="toggle-sub">Bottom-right logo overlay on slides</div>
+            </div>
+            <div id="toggleWatermark" class="switch" data-on="true" role="switch" aria-checked="true" tabindex="0">
+              <div class="knob"></div>
+            </div>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-left">
+              <div class="toggle-title">Frame overlay</div>
+              <div class="toggle-sub">Transparent PNG frame on top of video</div>
+            </div>
+            <div id="toggleFrame" class="switch" data-on="true" role="switch" aria-checked="true" tabindex="0">
+              <div class="knob"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="brand-adv">
+          <div class="row">
+            <div class="field">
+              <label for="logoUrl">Logo URL (optional)</label>
+              <input id="logoUrl" type="url" placeholder="https://.../logo.png" />
+              <div class="inline-note">
+                If empty: API may use bundled <span class="pill">/app/assets/logo.png</span> (if present).  
+                If Watermark is OFF, the logo will not be used for watermark.
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="framePath">Frame path (optional)</label>
+              <input id="framePath" type="text" value="assets/frame_overlay.png" />
+              <div class="inline-note">
+                Default: <span class="pill">assets/frame_overlay.png</span> (inside your container at <span class="pill">/app/assets/</span>).
+              </div>
+            </div>
+
+            <div class="field small">
+              <label for="frameOpacity">Frame opacity (0..1)</label>
+              <input id="frameOpacity" type="number" min="0" max="1" step="0.01" value="1.00" />
+            </div>
+
+            <div class="field small">
+              <label for="frameScaleMode">Frame scale mode</label>
+              <select id="frameScaleMode">
+                <option value="stretch">stretch</option>
+                <option value="fit">fit</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
         <div class="row">
           <div class="field">
             <label for="audioMp3">Audio (MP3 upload — optional)</label>
@@ -391,6 +511,7 @@
             <li>Each slide needs a <b>file</b> or <b>URL</b></li>
             <li>If any slide uses a <b>file</b> → STEP 1 uploads files to n8n to get URLs</li>
             <li>If MP3 selected → STEP 1 uploads it to n8n as <b>audio</b></li>
+            <li>Branding toggles are sent as real booleans (<span class="pill">true/false</span>)</li>
           </ul>
         </div>
       </div>
@@ -408,6 +529,10 @@
   const renderBtn = el("renderBtn");
   const audioMp3El = el("audioMp3");
 
+  // NEW: branding controls
+  const toggleWatermarkEl = el("toggleWatermark");
+  const toggleFrameEl = el("toggleFrame");
+
   function logStatus(msg) { statusEl.textContent = msg; }
 
   function escapeHtml(str) {
@@ -418,6 +543,44 @@
       .replaceAll("\"","&quot;")
       .replaceAll("'","&#039;");
   }
+
+  // ---------- NEW: Switch helpers ----------
+  function isSwitchOn(swEl) {
+    return String(swEl.getAttribute("data-on")) === "true";
+  }
+  function setSwitch(swEl, on) {
+    const v = !!on;
+    swEl.setAttribute("data-on", v ? "true" : "false");
+    swEl.setAttribute("aria-checked", v ? "true" : "false");
+  }
+  function toggleSwitch(swEl) {
+    setSwitch(swEl, !isSwitchOn(swEl));
+  }
+  function wireSwitch(swEl, onChange) {
+    swEl.addEventListener("click", () => { toggleSwitch(swEl); onChange && onChange(isSwitchOn(swEl)); });
+    swEl.addEventListener("keydown", (e) => {
+      if (e.key === " " || e.key === "Enter") {
+        e.preventDefault();
+        toggleSwitch(swEl);
+        onChange && onChange(isSwitchOn(swEl));
+      }
+    });
+  }
+
+  // default ON
+  setSwitch(toggleWatermarkEl, true);
+  setSwitch(toggleFrameEl, true);
+
+  // enable/disable frame fields when toggle changes
+  function syncFrameFields() {
+    const on = isSwitchOn(toggleFrameEl);
+    el("framePath").disabled = !on;
+    el("frameOpacity").disabled = !on;
+    el("frameScaleMode").disabled = !on;
+  }
+  wireSwitch(toggleFrameEl, syncFrameFields);
+  wireSwitch(toggleWatermarkEl, () => {});
+  syncFrameFields();
 
   function cleanupSlidePreview(slideEl) {
     if (slideEl && slideEl._previewObjectUrl) {
@@ -458,6 +621,15 @@
   }
 
   function buildUiState() {
+    // IMPORTANT: toggles must become REAL booleans in JSON payload
+    const watermarkOn = isSwitchOn(toggleWatermarkEl);
+    const frameOn = isSwitchOn(toggleFrameEl);
+
+    const logoUrl = el("logoUrl").value.trim();
+    const framePath = el("framePath").value.trim();
+    const frameOpacity = Number(el("frameOpacity").value);
+    const frameScaleMode = el("frameScaleMode").value;
+
     return {
       format: el("format").value,
       style: el("style").value,
@@ -466,7 +638,17 @@
       slides: currentSlides(),
       output: { fps: Number(el("fps").value) },
       audioVolume: Number(el("audioVolume").value),
-      brand: {}
+
+      // Brand object matches your API schema
+      brand: {
+        enabled: true,
+        watermark: watermarkOn,            // <-- controls logo watermark
+        logoUrl: logoUrl || undefined,     // <-- optional
+        frameEnabled: frameOn,             // <-- controls frame overlay
+        framePath: framePath || undefined,
+        frameOpacity: Number.isFinite(frameOpacity) ? frameOpacity : undefined,
+        frameScaleMode: frameScaleMode || undefined
+      }
     };
   }
 
@@ -492,6 +674,14 @@
     if (!Number.isFinite(uiState.durationSec) || uiState.durationSec < 2) throw new Error("Duration must be at least 2 seconds.");
     if (!Number.isFinite(uiState.output?.fps) || uiState.output.fps < 1 || uiState.output.fps > 60) throw new Error("FPS must be 1–60.");
     if (!Number.isFinite(uiState.audioVolume) || uiState.audioVolume < 0 || uiState.audioVolume > 1) throw new Error("Audio volume must be 0..1.");
+
+    // NEW: frame fields validation only when frame is enabled
+    if (uiState.brand && uiState.brand.frameEnabled) {
+      const op = uiState.brand.frameOpacity;
+      if (op !== undefined && (!Number.isFinite(op) || op < 0 || op > 1)) {
+        throw new Error("Frame opacity must be 0..1.");
+      }
+    }
   }
 
   // ✅ STEP 1: Upload BOTH (image files + optional MP3) to n8n
@@ -741,9 +931,15 @@
 
       const payload = toApiPayload(ui);
 
+      // Helpful: show what we're sending (especially the toggles)
+      logStatus("➡ Sending payload (brand toggles included)…\n" + JSON.stringify({
+        brand: payload.brand,
+        slides: payload.slides.length,
+        durationSec: payload.durationSec,
+        fps: payload.output?.fps
+      }, null, 2));
+
       // Rendering still uses your API:
-      // - If mp3 selected, we attach it as file to /render-upload.
-      // (n8n now also receives it so you can evolve to "n8n renders" later.)
       if (mp3) {
         logStatus("➡ Rendering via API /render-upload (payload + audio file)…");
         const fd = new FormData();
@@ -772,4 +968,3 @@
 </script>
 </body>
 </html>
-
