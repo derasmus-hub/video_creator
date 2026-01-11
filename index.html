@@ -265,7 +265,7 @@
     .url-fallback { display:grid; gap: 6px; }
     .tiny-note { font-size: 12px; color: rgba(255,255,255,0.65); }
 
-    /* NEW: toggle rows */
+    /* Toggle rows */
     .toggle-row {
       display:flex;
       align-items:center;
@@ -405,7 +405,7 @@
 
         <div class="divider"></div>
 
-        <!-- NEW: Branding toggles -->
+        <!-- Branding toggles -->
         <div class="row">
           <div class="toggle-row">
             <div class="toggle-left">
@@ -529,7 +529,6 @@
   const renderBtn = el("renderBtn");
   const audioMp3El = el("audioMp3");
 
-  // NEW: branding controls
   const toggleWatermarkEl = el("toggleWatermark");
   const toggleFrameEl = el("toggleFrame");
 
@@ -544,7 +543,7 @@
       .replaceAll("'","&#039;");
   }
 
-  // ---------- NEW: Switch helpers ----------
+  // ---------- Switch helpers ----------
   function isSwitchOn(swEl) {
     return String(swEl.getAttribute("data-on")) === "true";
   }
@@ -567,11 +566,9 @@
     });
   }
 
-  // default ON
   setSwitch(toggleWatermarkEl, true);
   setSwitch(toggleFrameEl, true);
 
-  // enable/disable frame fields when toggle changes
   function syncFrameFields() {
     const on = isSwitchOn(toggleFrameEl);
     el("framePath").disabled = !on;
@@ -621,9 +618,8 @@
   }
 
   function buildUiState() {
-    // IMPORTANT: toggles must become REAL booleans in JSON payload
-    const watermarkOn = isSwitchOn(toggleWatermarkEl);
-    const frameOn = isSwitchOn(toggleFrameEl);
+    const watermarkEnabled = isSwitchOn(toggleWatermarkEl);
+    const frameEnabled = isSwitchOn(toggleFrameEl);
 
     const logoUrl = el("logoUrl").value.trim();
     const framePath = el("framePath").value.trim();
@@ -639,15 +635,25 @@
       output: { fps: Number(el("fps").value) },
       audioVolume: Number(el("audioVolume").value),
 
-      // Brand object matches your API schema
+      // ✅ These top-level booleans are what n8n/video-creator can reliably read
+      watermarkEnabled,
+      frameEnabled,
+
+      // ✅ Keep brand info for your API, but make it consistent
       brand: {
         enabled: true,
-        watermark: watermarkOn,            // <-- controls logo watermark
-        logoUrl: logoUrl || undefined,     // <-- optional
-        frameEnabled: frameOn,             // <-- controls frame overlay
-        framePath: framePath || undefined,
-        frameOpacity: Number.isFinite(frameOpacity) ? frameOpacity : undefined,
-        frameScaleMode: frameScaleMode || undefined
+
+        // use explicit keys
+        watermarkEnabled,
+        frameEnabled,
+
+        // only include URLs/fields when enabled
+        ...(watermarkEnabled ? { logoUrl: (logoUrl || undefined) } : {}),
+        ...(frameEnabled ? {
+          framePath: (framePath || undefined),
+          frameOpacity: Number.isFinite(frameOpacity) ? frameOpacity : undefined,
+          frameScaleMode: frameScaleMode || undefined
+        } : {})
       }
     };
   }
@@ -675,9 +681,8 @@
     if (!Number.isFinite(uiState.output?.fps) || uiState.output.fps < 1 || uiState.output.fps > 60) throw new Error("FPS must be 1–60.");
     if (!Number.isFinite(uiState.audioVolume) || uiState.audioVolume < 0 || uiState.audioVolume > 1) throw new Error("Audio volume must be 0..1.");
 
-    // NEW: frame fields validation only when frame is enabled
-    if (uiState.brand && uiState.brand.frameEnabled) {
-      const op = uiState.brand.frameOpacity;
+    if (uiState.frameEnabled) {
+      const op = uiState.brand?.frameOpacity;
       if (op !== undefined && (!Number.isFinite(op) || op < 0 || op > 1)) {
         throw new Error("Frame opacity must be 0..1.");
       }
@@ -685,16 +690,18 @@
   }
 
   // ✅ STEP 1: Upload BOTH (image files + optional MP3) to n8n
-  // n8n should return { urls: [ ...imageUrls... ], audioReceived: true/false, audioName: "...", audioUrl?: "..." }
-  async function uploadMediaToN8n({ slides, audioFile }) {
+  // IMPORTANT FIXES:
+  //  - images must be appended under "file" (matches Webhook node binary field name)
+  //  - send "payload" to n8n so it can carry watermark/frame toggles
+  async function uploadMediaToN8n({ uiState, audioFile }) {
     const webhook = el("n8nWebhook").value.trim();
     if (!webhook) throw new Error("Media Upload Webhook (n8n) is empty.");
 
+    const slides = uiState.slides;
     const hasImageFiles = slides.some(s => s.file);
     const hasAudio = !!audioFile;
 
     if (!hasImageFiles && !hasAudio) {
-      // Nothing to upload
       return { slides, n8n: null };
     }
 
@@ -702,12 +709,12 @@
 
     const fd = new FormData();
 
-    // Append images under "files" (matches your current n8n workflow)
+    // Append images under "file" (not "files")
     const fileSlides = [];
     slides.forEach((s, i) => {
       if (s.file) {
         fileSlides.push({ index: i, file: s.file });
-        fd.append("files", s.file, s.file.name || `slide_${i+1}.png`);
+        fd.append("file", s.file, s.file.name || `slide_${i+1}.png`);
       }
     });
 
@@ -716,11 +723,32 @@
       fd.append("audio", audioFile, audioFile.name || "audio.mp3");
     }
 
+    // ✅ Send payload to n8n (this is what you were missing)
+    // Keep it small and explicit.
+    const n8nPayload = {
+      format: uiState.format,
+      style: uiState.style,
+      transition: uiState.transition,
+      durationSec: uiState.durationSec,
+      audioVolume: uiState.audioVolume,
+      watermarkEnabled: uiState.watermarkEnabled,
+      frameEnabled: uiState.frameEnabled,
+      brand: uiState.brand
+    };
+    fd.append("payload", JSON.stringify(n8nPayload));
+
+    // meta is optional but useful
     fd.append("meta", JSON.stringify({
       totalSlides: slides.length,
       uploadedImages: fileSlides.length,
       hasAudio,
     }));
+
+    // Debug: prove payload is actually in the multipart body
+    // You can remove this once confirmed.
+    for (const [k, v] of fd.entries()) {
+      console.log("FD", k, v);
+    }
 
     const res = await fetch(webhook, { method: "POST", body: fd });
 
@@ -926,20 +954,24 @@
       const mp3 = audioMp3El.files && audioMp3El.files[0];
 
       // ✅ STEP 1: upload media (images + optional mp3) to n8n
-      const step1 = await uploadMediaToN8n({ slides: ui.slides, audioFile: mp3 });
+      const step1 = await uploadMediaToN8n({ uiState: ui, audioFile: mp3 });
       ui.slides = step1.slides;
 
       const payload = toApiPayload(ui);
 
-      // Helpful: show what we're sending (especially the toggles)
-      logStatus("➡ Sending payload (brand toggles included)…\n" + JSON.stringify({
-        brand: payload.brand,
-        slides: payload.slides.length,
-        durationSec: payload.durationSec,
-        fps: payload.output?.fps
-      }, null, 2));
+      logStatus(
+        "➡ Sending payload…\n" +
+        JSON.stringify({
+          watermarkEnabled: payload.watermarkEnabled,
+          frameEnabled: payload.frameEnabled,
+          brand: payload.brand,
+          slides: payload.slides.length,
+          durationSec: payload.durationSec,
+          fps: payload.output?.fps
+        }, null, 2)
+      );
 
-      // Rendering still uses your API:
+      // Rendering uses your API:
       if (mp3) {
         logStatus("➡ Rendering via API /render-upload (payload + audio file)…");
         const fd = new FormData();
