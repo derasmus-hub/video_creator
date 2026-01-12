@@ -350,7 +350,7 @@
             <label for="n8nWebhook">Media Upload Webhook (n8n)</label>
             <input id="n8nWebhook" type="url" value="https://erasmus-consulting.app.n8n.cloud/webhook/video-render" />
             <div class="hint" style="margin-top:6px;">
-              STEP 1: local image files (and MP3 if selected) are uploaded here first. n8n should return URLs.
+              STEP 1: local image files (and MP3 if selected) are uploaded here first. n8n should return the MP4.
             </div>
           </div>
         </div>
@@ -471,8 +471,7 @@
             <label for="audioMp3">Audio (MP3 upload — optional)</label>
             <input id="audioMp3" type="file" accept="audio/mpeg,audio/mp3,audio/*" />
             <div class="hint" style="margin-top:6px;">
-              If MP3 selected: it will be uploaded to n8n in STEP 1 as form field <span class="pill">audio</span>.
-              Rendering still happens via your API afterwards.
+              If MP3 selected: it will be uploaded to n8n as form field <span class="pill">audio</span>.
             </div>
           </div>
         </div>
@@ -509,8 +508,8 @@
           <ul style="margin:0; padding-left:18px; line-height:1.4;">
             <li>Slides must be <b>4–25</b></li>
             <li>Each slide needs a <b>file</b> or <b>URL</b></li>
-            <li>If any slide uses a <b>file</b> → STEP 1 uploads files to n8n to get URLs</li>
-            <li>If MP3 selected → STEP 1 uploads it to n8n as <b>audio</b></li>
+            <li>If any slide uses a <b>file</b> → upload files to n8n to render</li>
+            <li>If MP3 selected → upload it to n8n as <b>audio</b></li>
             <li>Branding toggles are sent as real booleans (<span class="pill">true/false</span>)</li>
           </ul>
         </div>
@@ -635,19 +634,13 @@
       output: { fps: Number(el("fps").value) },
       audioVolume: Number(el("audioVolume").value),
 
-      // ✅ These top-level booleans are what n8n/video-creator can reliably read
       watermarkEnabled,
       frameEnabled,
 
-      // ✅ Keep brand info for your API, but make it consistent
       brand: {
         enabled: true,
-
-        // use explicit keys
         watermarkEnabled,
         frameEnabled,
-
-        // only include URLs/fields when enabled
         ...(watermarkEnabled ? { logoUrl: (logoUrl || undefined) } : {}),
         ...(frameEnabled ? {
           framePath: (framePath || undefined),
@@ -655,16 +648,6 @@
           frameScaleMode: frameScaleMode || undefined
         } : {})
       }
-    };
-  }
-
-  function toApiPayload(ui) {
-    return {
-      ...ui,
-      slides: ui.slides.map(s => ({
-        imageUrl: s.imageUrl,
-        headline: s.headline || undefined
-      }))
     };
   }
 
@@ -689,106 +672,16 @@
     }
   }
 
-  // ✅ STEP 1: Upload BOTH (image files + optional MP3) to n8n
-  // IMPORTANT FIXES:
-  //  - images must be appended under "file" (matches Webhook node binary field name)
-  //  - send "payload" to n8n so it can carry watermark/frame toggles
-  async function uploadMediaToN8n({ uiState, audioFile }) {
-    const webhook = el("n8nWebhook").value.trim();
-    if (!webhook) throw new Error("Media Upload Webhook (n8n) is empty.");
-
-    const slides = uiState.slides;
-    const hasImageFiles = slides.some(s => s.file);
-    const hasAudio = !!audioFile;
-
-    if (!hasImageFiles && !hasAudio) {
-      return { slides, n8n: null };
-    }
-
-    logStatus("⬆️ STEP 1: Uploading media to n8n (images + audio if selected)…");
-
-    const fd = new FormData();
-
-    // Append images under "file" (not "files")
-    const fileSlides = [];
-    slides.forEach((s, i) => {
-      if (s.file) {
-        fileSlides.push({ index: i, file: s.file });
-        fd.append("file", s.file, s.file.name || `slide_${i+1}.png`);
-      }
-    });
-
-    // Append audio under "audio"
-    if (audioFile) {
-      fd.append("audio", audioFile, audioFile.name || "audio.mp3");
-    }
-
-    // ✅ Send payload to n8n (this is what you were missing)
-    // Keep it small and explicit.
-    const n8nPayload = {
-      format: uiState.format,
-      style: uiState.style,
-      transition: uiState.transition,
-      durationSec: uiState.durationSec,
-      audioVolume: uiState.audioVolume,
-      watermarkEnabled: uiState.watermarkEnabled,
-      frameEnabled: uiState.frameEnabled,
-      brand: uiState.brand
-    };
-    fd.append("payload", JSON.stringify(n8nPayload));
-
-    // meta is optional but useful
-    fd.append("meta", JSON.stringify({
-      totalSlides: slides.length,
-      uploadedImages: fileSlides.length,
-      hasAudio,
-    }));
-
-    // Debug: prove payload is actually in the multipart body
-    // You can remove this once confirmed.
-    for (const [k, v] of fd.entries()) {
-      console.log("FD", k, v);
-    }
-
-    const res = await fetch(webhook, { method: "POST", body: fd });
-
-    if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      throw new Error(`n8n upload failed: HTTP ${res.status}\n${t}`);
-    }
-
-    const j = await res.json().catch(() => null);
-    if (!j) throw new Error("n8n upload response was not JSON.");
-
-    // If n8n returns image URLs, apply them
-    if (fileSlides.length > 0) {
-      if (!Array.isArray(j.urls)) {
-        throw new Error(`n8n response invalid. Expected { urls:[...] } but got:\n${JSON.stringify(j, null, 2)}`);
-      }
-      if (j.urls.length !== fileSlides.length) {
-        throw new Error(`n8n returned ${j.urls.length} urls but we uploaded ${fileSlides.length} image files.`);
-      }
-
-      const outSlides = slides.map(s => ({ ...s }));
-      fileSlides.forEach((x, k) => {
-        outSlides[x.index].imageUrl = j.urls[k];
-        outSlides[x.index].file = null;
-      });
-
-      logStatus(`✅ STEP 1: n8n returned ${j.urls.length} image URLs.${hasAudio ? " Audio uploaded too." : ""}`);
-      return { slides: outSlides, n8n: j };
-    }
-
-    logStatus(`✅ STEP 1: n8n received audio.${hasImageFiles ? " (No image files uploaded)" : ""}`);
-    return { slides, n8n: j };
+  function setRenderingState(isRendering) {
+    renderBtn.disabled = isRendering;
+    renderBtn.textContent = isRendering ? "Rendering…" : "Render Video";
   }
 
-  async function postAndDownloadMp4(url, fetchOptions) {
-    logStatus("🎬 Rendering… (don’t close this tab)");
-    const res = await fetch(url, fetchOptions);
+  async function downloadMp4FromResponse(res) {
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
 
     if (!res.ok) {
-      const ct = res.headers.get("content-type") || "";
+      // try to show useful error text/json
       const detail = ct.includes("application/json")
         ? JSON.stringify(await res.json().catch(() => null), null, 2)
         : await res.text().catch(() => "");
@@ -806,11 +699,6 @@
     URL.revokeObjectURL(objectUrl);
 
     logStatus("✅ Done. Downloaded video.mp4");
-  }
-
-  function setRenderingState(isRendering) {
-    renderBtn.disabled = isRendering;
-    renderBtn.textContent = isRendering ? "Rendering…" : "Render Video";
   }
 
   function addSlide(data = {}) {
@@ -941,53 +829,57 @@
     refreshSlideCount();
   });
 
+  // ✅ PATCHED: ONE-SHOT upload+render via n8n, and upload images as file0..fileN
   el("renderBtn").addEventListener("click", async () => {
     try {
       setRenderingState(true);
 
-      const apiBase = el("apiBase").value.trim().replace(/\/+$/, "");
-      if (!apiBase) throw new Error("API Base URL is empty.");
+      const webhook = el("n8nWebhook").value.trim();
+      if (!webhook) throw new Error("Media Upload Webhook (n8n) is empty.");
 
-      let ui = buildUiState();
+      const ui = buildUiState();
       validateBeforeSend(ui);
 
       const mp3 = audioMp3El.files && audioMp3El.files[0];
 
-      // ✅ STEP 1: upload media (images + optional mp3) to n8n
-      const step1 = await uploadMediaToN8n({ uiState: ui, audioFile: mp3 });
-      ui.slides = step1.slides;
+      const fd = new FormData();
 
-      const payload = toApiPayload(ui);
-
-      logStatus(
-        "➡ Sending payload…\n" +
-        JSON.stringify({
-          watermarkEnabled: payload.watermarkEnabled,
-          frameEnabled: payload.frameEnabled,
-          brand: payload.brand,
-          slides: payload.slides.length,
-          durationSec: payload.durationSec,
-          fps: payload.output?.fps
-        }, null, 2)
-      );
-
-      // Rendering uses your API:
-      if (mp3) {
-        logStatus("➡ Rendering via API /render-upload (payload + audio file)…");
-        const fd = new FormData();
-        fd.append("payload", JSON.stringify(payload));
-        fd.append("audio", mp3, mp3.name);
-
-        await postAndDownloadMp4(apiBase + "/render-upload", { method: "POST", body: fd });
-        return;
-      }
-
-      logStatus("➡ Rendering via API /render (JSON)…");
-      await postAndDownloadMp4(apiBase + "/render", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+      // ✅ CRITICAL FIX: unique keys so n8n receives ALL files
+      let fileCount = 0;
+      ui.slides.forEach((s, i) => {
+        if (s.file) {
+          const safeName = s.file.name || `slide_${String(i + 1).padStart(2, "0")}.png`;
+          fd.append(`file${fileCount}`, s.file, safeName);
+          fileCount++;
+        }
       });
+
+      // Optional audio
+      if (mp3) fd.append("audio", mp3, mp3.name || "audio.mp3");
+
+      // Payload (so watermark/frame toggles travel through n8n)
+      fd.append("payload", JSON.stringify({
+        format: ui.format,
+        style: ui.style,
+        transition: ui.transition,
+        durationSec: ui.durationSec,
+        audioVolume: ui.audioVolume,
+        watermarkEnabled: ui.watermarkEnabled,
+        frameEnabled: ui.frameEnabled,
+        brand: ui.brand,
+        slides: ui.slides.map(s => ({ headline: s.headline || undefined }))
+      }));
+
+      fd.append("meta", JSON.stringify({
+        totalSlides: ui.slides.length,
+        uploadedImages: fileCount,
+        hasAudio: !!mp3,
+      }));
+
+      logStatus(`⬆️ Uploading ${fileCount} image(s) ${mp3 ? "+ audio " : ""}to n8n and rendering…`);
+
+      const res = await fetch(webhook, { method: "POST", body: fd });
+      await downloadMp4FromResponse(res);
 
     } catch (err) {
       logStatus("❌ " + (err && err.message ? err.message : String(err)));
