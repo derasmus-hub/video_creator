@@ -46,6 +46,7 @@
       justify-content:space-between;
       gap: 16px;
       margin-bottom: 18px;
+      flex-wrap: wrap;
     }
 
     h1 {
@@ -57,7 +58,7 @@
     .sub {
       margin: 6px 0 0;
       color: var(--muted);
-      max-width: 72ch;
+      max-width: 70ch;
       line-height: 1.35;
       font-size: 14px;
     }
@@ -71,7 +72,7 @@
 
     @media (max-width: 980px) {
       .grid { grid-template-columns: 1fr; }
-      header { align-items: flex-start; flex-direction: column; }
+      header { align-items: flex-start; }
     }
 
     .card {
@@ -83,12 +84,6 @@
       padding: 16px;
     }
 
-    .row {
-      display:flex;
-      gap: var(--gap);
-      flex-wrap: wrap;
-    }
-
     label {
       display:block;
       font-size: 12px;
@@ -96,7 +91,7 @@
       margin-bottom: 6px;
     }
 
-    input[type="text"], input[type="number"], input[type="url"], select, textarea {
+    input[type="number"], input[type="url"], select {
       width: 100%;
       border: 1px solid rgba(255,255,255,0.16);
       background: rgba(255,255,255,0.06);
@@ -106,39 +101,45 @@
       outline: none;
     }
 
-    input[type="text"]:focus,
-    input[type="number"]:focus,
-    input[type="url"]:focus,
-    select:focus,
-    textarea:focus {
+    input[type="number"]:focus, input[type="url"]:focus, select:focus {
       border-color: rgba(99,179,237,0.65);
       box-shadow: 0 0 0 3px rgba(99,179,237,0.18);
+    }
+
+    .row {
+      display:flex;
+      gap: var(--gap);
+      flex-wrap: wrap;
+      align-items: flex-start;
     }
 
     .field { flex: 1; min-width: 220px; }
     .field.small { min-width: 160px; flex: 0.6; }
     .field.tiny  { min-width: 120px; flex: 0.4; }
 
-    .slides {
-      display:flex;
-      flex-direction:column;
-      gap: 10px;
-      margin-top: 12px;
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,0.10);
+      margin: 14px 0;
     }
 
-    .slide {
-      border: 1px solid rgba(255,255,255,0.14);
-      border-radius: 14px;
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .status {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: rgba(255,255,255,0.78);
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 12px;
       padding: 10px;
-      background: rgba(255,255,255,0.05);
-    }
-
-    .slide-head {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 10px;
-      margin-bottom: 8px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 160px;
     }
 
     .pill {
@@ -177,96 +178,64 @@
       border-color: rgba(248,113,113,0.45);
     }
 
-    .hint {
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.35;
+    .drop {
+      border: 1px dashed rgba(255,255,255,0.22);
+      background: rgba(255,255,255,0.04);
+      border-radius: 14px;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      transition: border-color .15s ease, background .15s ease, transform .05s ease;
     }
 
-    .status {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: rgba(255,255,255,0.78);
-      background: rgba(0,0,0,0.25);
-      border: 1px solid rgba(255,255,255,0.10);
+    .drop:hover {
+      border-color: rgba(99,179,237,0.55);
+      background: rgba(99,179,237,0.08);
+    }
+
+    .drop.dragover {
+      border-color: rgba(74,222,128,0.75);
+      background: rgba(74,222,128,0.10);
+      transform: translateY(-1px);
+    }
+
+    .drop-top {
+      display:flex;
+      justify-content:space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .drop-title { font-weight: 700; font-size: 13px; }
+    .drop-hint { color: var(--muted); font-size: 12px; line-height: 1.35; }
+
+    .drop-actions { display:flex; gap: 10px; align-items:center; }
+    .drop input[type="file"] { display: none; }
+
+    .drop-preview {
+      width: 100%;
+      aspect-ratio: 16 / 9;
       border-radius: 12px;
-      padding: 10px;
-      white-space: pre-wrap;
-      word-break: break-word;
-      min-height: 140px;
-    }
-
-    .divider {
-      height: 1px;
-      background: rgba(255,255,255,0.10);
-      margin: 14px 0;
-    }
-
-    /* Toggle rows */
-    .toggle-row {
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.25);
       display:flex;
       align-items:center;
-      justify-content:space-between;
-      gap: 12px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.05);
-      border-radius: 14px;
-      padding: 10px 12px;
-      flex: 1;
-      min-width: 220px;
-    }
-    .toggle-left { display:flex; flex-direction:column; gap: 2px; }
-    .toggle-title { font-weight: 700; font-size: 13px; }
-    .toggle-sub { font-size: 12px; color: rgba(255,255,255,0.70); line-height: 1.25; }
-
-    .switch {
-      position: relative;
-      width: 46px;
-      height: 28px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.14);
-      border: 1px solid rgba(255,255,255,0.14);
-      flex: 0 0 auto;
-      cursor: pointer;
-      transition: background .15s ease, border-color .15s ease;
-    }
-    .switch[data-on="true"] {
-      background: rgba(74,222,128,0.22);
-      border-color: rgba(74,222,128,0.40);
-    }
-    .knob {
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 22px;
-      height: 22px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.88);
-      transition: transform .15s ease;
-    }
-    .switch[data-on="true"] .knob { transform: translateX(18px); }
-
-    .inline-note {
+      justify-content:center;
+      color: rgba(255,255,255,0.70);
       font-size: 12px;
-      color: rgba(255,255,255,0.68);
-      margin-top: 6px;
-      line-height: 1.3;
     }
 
-    .two-col {
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-    @media (max-width: 980px) {
-      .two-col { grid-template-columns: 1fr; }
+    .drop-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display:block;
     }
 
-    .small-code {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: rgba(255,255,255,0.85);
-    }
+    .tiny-note { font-size: 12px; color: rgba(255,255,255,0.65); line-height: 1.3; }
+    .section-title { margin: 0 0 8px; font-size: 14px; letter-spacing: 0.2px; }
   </style>
 </head>
 
@@ -276,33 +245,23 @@
       <div>
         <h1>Video Renderer — Control Room</h1>
         <p class="sub">
-          This UI now only shows inputs your <span class="pill">render_video.py</span> actually uses:
-          JSON payload with <b>4–25 image URLs</b>, optional <b>audioUrl</b>, and supported <b>brand</b> toggles
-          (<b>watermark/logo</b>, <b>intro/outro</b>, <b>cinematic effects</b>).<br />
-          <span class="small-code">Frame overlay controls were removed</span> (because you asked to remove frames from rendering).
+          Drop exactly <b>4</b> slide images, optionally add an MP3, optionally add a logo.
+          We send the files to n8n; n8n converts them to URLs and calls your API.
         </p>
       </div>
-      <div class="pill">v4 UI (API-aligned)</div>
+      <div class="pill">Minimal v1</div>
     </header>
 
     <div class="grid">
       <!-- LEFT -->
       <div class="card">
+
         <div class="row">
           <div class="field">
-            <label for="apiBase">API Base URL</label>
-            <input id="apiBase" type="url" value="http://localhost:8000" />
+            <label for="n8nWebhook">n8n Webhook</label>
+            <input id="n8nWebhook" type="url" value="https://erasmus-consulting.app.n8n.cloud/webhook/video-render" />
             <div class="hint" style="margin-top:6px;">
-              Example: <span class="pill">http://localhost:8000</span> or your deployed domain.
-            </div>
-          </div>
-
-          <div class="field">
-            <label for="apiPath">Render endpoint path</label>
-            <input id="apiPath" type="text" value="/render" />
-            <div class="hint" style="margin-top:6px;">
-              Set this to your FastAPI route that returns <span class="pill">video/mp4</span>.
-              (Common examples: <span class="pill">/render</span>, <span class="pill">/render-video</span>, <span class="pill">/video/render</span>)
+              Must accept <span class="pill">multipart/form-data</span> and return <span class="pill">video/mp4</span>.
             </div>
           </div>
         </div>
@@ -340,202 +299,72 @@
           </div>
 
           <div class="field tiny">
-            <label for="fps">FPS (1–60)</label>
+            <label for="fps">FPS</label>
             <input id="fps" type="number" min="1" max="60" value="30" />
           </div>
 
           <div class="field tiny">
-            <label for="durationSec">Duration (sec ≥ 2)</label>
+            <label for="durationSec">Duration (sec)</label>
             <input id="durationSec" type="number" min="2" value="12" />
           </div>
 
           <div class="field tiny">
-            <label for="audioVolume">Audio Volume (0..3)</label>
+            <label for="audioVolume">Audio volume (0..3)</label>
             <input id="audioVolume" type="number" min="0" max="3" step="0.01" value="0.50" />
           </div>
         </div>
 
         <div class="divider"></div>
 
-        <div class="two-col">
-          <div class="field">
-            <label for="audioUrl">Audio URL (optional)</label>
-            <input id="audioUrl" type="url" placeholder="https://.../audio.mp3" />
-            <div class="inline-note">
-              Your API can take <span class="pill">payload.audioUrl</span>. If empty, video renders with no audio (unless your server injects one).
-            </div>
-          </div>
-
-          <div class="field">
-            <label for="minSlideSec">Brand: minSlideSec (optional)</label>
-            <input id="minSlideSec" type="number" min="0" step="0.1" value="2.8" />
-            <div class="inline-note">
-              Maps to <span class="pill">brand.minSlideSec</span> in your renderer.
-            </div>
-          </div>
-        </div>
+        <h3 class="section-title">1) Slides (required — exactly 4)</h3>
+        <div id="slides" class="row"></div>
 
         <div class="divider"></div>
 
-        <!-- Branding toggles that match render_video.py -->
-        <div class="row">
-          <div class="toggle-row">
-            <div class="toggle-left">
-              <div class="toggle-title">Logo enabled</div>
-              <div class="toggle-sub">Master switch: disables watermark + intro/outro logos</div>
-            </div>
-            <div id="toggleLogoEnabled" class="switch" data-on="true" role="switch" aria-checked="true" tabindex="0">
-              <div class="knob"></div>
-            </div>
-          </div>
-
-          <div class="toggle-row">
-            <div class="toggle-left">
-              <div class="toggle-title">Watermark</div>
-              <div class="toggle-sub">Bottom corner logo overlay on slideshow</div>
-            </div>
-            <div id="toggleWatermark" class="switch" data-on="true" role="switch" aria-checked="true" tabindex="0">
-              <div class="knob"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:10px;">
-          <div class="toggle-row">
-            <div class="toggle-left">
-              <div class="toggle-title">Intro</div>
-              <div class="toggle-sub">Colored intro card (optional centered logo)</div>
-            </div>
-            <div id="toggleIntro" class="switch" data-on="true" role="switch" aria-checked="true" tabindex="0">
-              <div class="knob"></div>
-            </div>
-          </div>
-
-          <div class="toggle-row">
-            <div class="toggle-left">
-              <div class="toggle-title">Outro</div>
-              <div class="toggle-sub">Colored outro card (optional logo + outroText)</div>
-            </div>
-            <div id="toggleOutro" class="switch" data-on="true" role="switch" aria-checked="true" tabindex="0">
-              <div class="knob"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:10px;">
-          <div class="toggle-row">
-            <div class="toggle-left">
-              <div class="toggle-title">Cinematic effects</div>
-              <div class="toggle-sub">Controls vignette + grain + breathing shadow + textures</div>
-            </div>
-            <div id="toggleCinematic" class="switch" data-on="true" role="switch" aria-checked="true" tabindex="0">
-              <div class="knob"></div>
-            </div>
-          </div>
-
-          <div class="toggle-row">
-            <div class="toggle-left">
-              <div class="toggle-title">Film grain</div>
-              <div class="toggle-sub">Applies FFmpeg noise effect if enabled</div>
-            </div>
-            <div id="toggleFilmGrain" class="switch" data-on="true" role="switch" aria-checked="true" tabindex="0">
-              <div class="knob"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:10px;">
-          <div class="toggle-row">
-            <div class="toggle-left">
-              <div class="toggle-title">Vignette</div>
-              <div class="toggle-sub">Applies vignette (amount if supported)</div>
-            </div>
-            <div id="toggleVignette" class="switch" data-on="true" role="switch" aria-checked="true" tabindex="0">
-              <div class="knob"></div>
-            </div>
-          </div>
-
-          <div class="toggle-row">
-            <div class="toggle-left">
-              <div class="toggle-title">Breathing shadow</div>
-              <div class="toggle-sub">Subtle pulsating shadow (optional)</div>
-            </div>
-            <div id="toggleBreathingShadow" class="switch" data-on="false" role="switch" aria-checked="false" tabindex="0">
-              <div class="knob"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
+        <h3 class="section-title">2) Audio (optional)</h3>
         <div class="row">
           <div class="field">
-            <label for="logoUrl">Brand: logoUrl (optional)</label>
-            <input id="logoUrl" type="url" placeholder="https://.../logo.png" />
-            <div class="inline-note">
-              If empty, your API may use bundled <span class="pill">/app/assets/logo.png</span> (if it exists).
+            <label for="audioMp3">MP3 file</label>
+            <input id="audioMp3" type="file" accept="audio/mpeg,audio/mp3,audio/*" />
+            <div class="tiny-note" style="margin-top:6px;">
+              Sent to n8n as field <span class="pill">audio</span>.
             </div>
-          </div>
-        </div>
-
-        <div class="two-col" style="margin-top:10px;">
-          <div class="field">
-            <label for="watermarkPos">Brand: watermarkPos</label>
-            <select id="watermarkPos">
-              <option value="br">br (bottom-right)</option>
-              <option value="bl">bl (bottom-left)</option>
-              <option value="tr">tr (top-right)</option>
-              <option value="tl">tl (top-left)</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="watermarkOpacity">Brand: watermarkOpacity (0.05..1)</label>
-            <input id="watermarkOpacity" type="number" min="0.05" max="1" step="0.01" value="1.00" />
-          </div>
-
-          <div class="field">
-            <label for="watermarkSize">Brand: watermarkSize (px)</label>
-            <input id="watermarkSize" type="number" min="40" step="1" value="260" />
-          </div>
-        </div>
-
-        <div class="two-col" style="margin-top:10px;">
-          <div class="field">
-            <label for="introSec">Brand: introSec</label>
-            <input id="introSec" type="number" min="0" step="0.1" value="0.6" />
-          </div>
-          <div class="field">
-            <label for="outroSec">Brand: outroSec</label>
-            <input id="outroSec" type="number" min="0" step="0.1" value="1.2" />
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:10px;">
-          <div class="field">
-            <label for="outroText">Brand: outroText (optional)</label>
-            <input id="outroText" type="text" placeholder="Thanks for watching…" />
           </div>
         </div>
 
         <div class="divider"></div>
 
-        <div class="row" style="justify-content:space-between; align-items:center;">
-          <div class="hint">Slides: <span id="slideCount" class="pill">0</span> (must be 4–25)</div>
-          <div class="row">
-            <button id="addSlide" class="btn" type="button">+ Add Slide</button>
-            <button id="loadDemo" class="btn" type="button">Load Demo (4)</button>
-            <button id="clearSlides" class="btn danger" type="button">Clear</button>
+        <h3 class="section-title">3) Logo (optional)</h3>
+        <div class="row">
+          <div class="field">
+            <label>Logo upload</label>
+            <div id="logoDrop" class="drop">
+              <div class="drop-top">
+                <div>
+                  <div class="drop-title">Drag & drop logo here</div>
+                  <div class="drop-hint">PNG recommended (transparent looks best)</div>
+                </div>
+                <div class="drop-actions">
+                  <button id="chooseLogoBtn" class="btn" type="button">Choose logo</button>
+                  <button id="clearLogoBtn" class="btn danger" type="button" style="display:none;">Clear</button>
+                </div>
+                <input id="logoFile" type="file" accept="image/*" />
+              </div>
+              <div id="logoPreview" class="drop-preview"><span>No logo selected</span></div>
+              <div class="tiny-note">
+                Sent to n8n as field <span class="pill">logo</span>. n8n will create a URL and set <span class="pill">brand.logoUrl</span>.
+              </div>
+            </div>
           </div>
         </div>
-
-        <div class="slides" id="slides"></div>
 
         <div class="divider"></div>
 
         <div class="row">
           <button id="renderBtn" class="btn primary" type="button" style="flex:1;">Render Video</button>
+          <button id="clearAllBtn" class="btn danger" type="button">Clear all</button>
         </div>
+
       </div>
 
       <!-- RIGHT -->
@@ -545,405 +374,312 @@
 
         <div class="divider"></div>
 
-        <h3 style="margin:0 0 8px;">Quick rules (API-aligned)</h3>
         <div class="hint">
+          <div style="margin-bottom:8px;"><b>Uploads to n8n:</b></div>
           <ul style="margin:0; padding-left:18px; line-height:1.4;">
-            <li>Slides must be <b>4–25</b></li>
-            <li>Each slide needs an <b>imageUrl</b> (your API requires it)</li>
-            <li>FPS must be <b>1–60</b></li>
-            <li>Duration must be <b>≥ 2</b></li>
-            <li>Audio volume is clamped by API to <b>0..3</b></li>
-            <li><b>Frame inputs removed</b> (UI will never send frame data)</li>
+            <li><span class="pill">file0..file3</span> (required)</li>
+            <li><span class="pill">audio</span> (optional)</li>
+            <li><span class="pill">logo</span> (optional)</li>
+            <li><span class="pill">payload</span> (JSON)</li>
           </ul>
         </div>
-
-        <div class="divider"></div>
-
-        <h3 style="margin:0 0 8px;">Payload preview</h3>
-        <div id="payloadPreview" class="status" style="min-height: 220px;">(will update as you edit)</div>
       </div>
     </div>
   </div>
 
 <script>
-  "use strict";
+"use strict";
 
-  const el = (id) => document.getElementById(id);
+function el(id){ return document.getElementById(id); }
 
-  const slidesEl = el("slides");
-  const slideCountEl = el("slideCount");
-  const statusEl = el("status");
-  const renderBtn = el("renderBtn");
-  const payloadPreviewEl = el("payloadPreview");
+const statusEl = el("status");
+const slidesWrap = el("slides");
+const renderBtn = el("renderBtn");
+const clearAllBtn = el("clearAllBtn");
 
-  function logStatus(msg) { statusEl.textContent = msg; }
+const audioMp3El = el("audioMp3");
 
-  function escapeHtml(str) {
-    return String(str)
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll("\"","&quot;")
-      .replaceAll("'","&#039;");
+const logoDropEl = el("logoDrop");
+const logoFileEl = el("logoFile");
+const logoPreviewEl = el("logoPreview");
+const chooseLogoBtn = el("chooseLogoBtn");
+const clearLogoBtn = el("clearLogoBtn");
+
+function logStatus(msg){ statusEl.textContent = msg; }
+
+function setRenderingState(on){
+  renderBtn.disabled = on;
+  renderBtn.textContent = on ? "Rendering…" : "Render Video";
+}
+
+function revokeObjectUrl(url){
+  if (!url) return;
+  try { URL.revokeObjectURL(url); } catch {}
+}
+
+/* ---------------- Slides (exactly 4) ---------------- */
+
+const slidesState = [
+  { file: null, previewUrl: null },
+  { file: null, previewUrl: null },
+  { file: null, previewUrl: null },
+  { file: null, previewUrl: null }
+];
+
+function buildSlideBox(index){
+  const box = document.createElement("div");
+  box.className = "field";
+  box.style.minWidth = "240px";
+  box.innerHTML = `
+    <label>Slide ${index + 1} (required)</label>
+    <div class="drop" id="drop_${index}">
+      <div class="drop-top">
+        <div>
+          <div class="drop-title">Drag & drop image here</div>
+          <div class="drop-hint">PNG/JPG/WebP</div>
+        </div>
+        <div class="drop-actions">
+          <button class="btn" type="button" id="choose_${index}">Choose</button>
+          <button class="btn danger" type="button" id="clear_${index}" style="display:none;">Clear</button>
+        </div>
+        <input type="file" id="file_${index}" accept="image/*" />
+      </div>
+      <div class="drop-preview" id="preview_${index}">
+        <span>No image selected</span>
+      </div>
+    </div>
+  `;
+  return box;
+}
+
+function setSlideFile(index, file){
+  if (!file || !file.type || !file.type.startsWith("image/")) {
+    throw new Error("Slide file must be an image.");
   }
+  // cleanup previous preview
+  revokeObjectUrl(slidesState[index].previewUrl);
+  slidesState[index].file = file;
+  slidesState[index].previewUrl = URL.createObjectURL(file);
 
-  // ---------- Switch helpers ----------
-  function isSwitchOn(swEl) {
-    return String(swEl.getAttribute("data-on")) === "true";
-  }
-  function setSwitch(swEl, on) {
-    const v = !!on;
-    swEl.setAttribute("data-on", v ? "true" : "false");
-    swEl.setAttribute("aria-checked", v ? "true" : "false");
-  }
-  function toggleSwitch(swEl) {
-    setSwitch(swEl, !isSwitchOn(swEl));
-  }
-  function wireSwitch(swEl, onChange) {
-    swEl.addEventListener("click", () => {
-      toggleSwitch(swEl);
-      onChange && onChange(isSwitchOn(swEl));
+  el(`preview_${index}`).innerHTML = `<img src="${slidesState[index].previewUrl}" alt="slide preview" />`;
+  el(`clear_${index}`).style.display = "inline-block";
+}
+
+function clearSlide(index){
+  revokeObjectUrl(slidesState[index].previewUrl);
+  slidesState[index].file = null;
+  slidesState[index].previewUrl = null;
+  const input = el(`file_${index}`);
+  if (input) input.value = "";
+  el(`preview_${index}`).innerHTML = `<span>No image selected</span>`;
+  el(`clear_${index}`).style.display = "none";
+}
+
+function wireSlide(index){
+  const drop = el(`drop_${index}`);
+  const fileInput = el(`file_${index}`);
+  const chooseBtn = el(`choose_${index}`);
+  const clearBtn = el(`clear_${index}`);
+
+  chooseBtn.addEventListener("click", () => fileInput.click());
+
+  clearBtn.addEventListener("click", () => {
+    clearSlide(index);
+  });
+
+  fileInput.addEventListener("change", () => {
+    const f = fileInput.files && fileInput.files[0];
+    if (!f) return;
+    try { setSlideFile(index, f); }
+    catch(err){ logStatus("❌ " + (err.message || String(err))); }
+  });
+
+  ["dragenter","dragover"].forEach(evt => {
+    drop.addEventListener(evt, (e) => {
+      e.preventDefault(); e.stopPropagation();
+      drop.classList.add("dragover");
     });
-    swEl.addEventListener("keydown", (e) => {
-      if (e.key === " " || e.key === "Enter") {
-        e.preventDefault();
-        toggleSwitch(swEl);
-        onChange && onChange(isSwitchOn(swEl));
-      }
+  });
+  ["dragleave","drop"].forEach(evt => {
+    drop.addEventListener(evt, (e) => {
+      e.preventDefault(); e.stopPropagation();
+      drop.classList.remove("dragover");
     });
+  });
+  drop.addEventListener("drop", (e) => {
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!f) return;
+    try { setSlideFile(index, f); }
+    catch(err){ logStatus("❌ " + (err.message || String(err))); }
+  });
+}
+
+function initSlides(){
+  slidesWrap.innerHTML = "";
+  for (let i = 0; i < 4; i++){
+    slidesWrap.appendChild(buildSlideBox(i));
   }
-
-  const toggleLogoEnabledEl = el("toggleLogoEnabled");
-  const toggleWatermarkEl = el("toggleWatermark");
-  const toggleIntroEl = el("toggleIntro");
-  const toggleOutroEl = el("toggleOutro");
-  const toggleCinematicEl = el("toggleCinematic");
-  const toggleFilmGrainEl = el("toggleFilmGrain");
-  const toggleVignetteEl = el("toggleVignette");
-  const toggleBreathingShadowEl = el("toggleBreathingShadow");
-
-  setSwitch(toggleLogoEnabledEl, true);
-  setSwitch(toggleWatermarkEl, true);
-  setSwitch(toggleIntroEl, true);
-  setSwitch(toggleOutroEl, true);
-  setSwitch(toggleCinematicEl, true);
-  setSwitch(toggleFilmGrainEl, true);
-  setSwitch(toggleVignetteEl, true);
-  setSwitch(toggleBreathingShadowEl, false);
-
-  wireSwitch(toggleLogoEnabledEl, () => { syncBrandFields(); refreshPreview(); });
-  wireSwitch(toggleWatermarkEl, () => { syncBrandFields(); refreshPreview(); });
-  wireSwitch(toggleIntroEl, () => { syncBrandFields(); refreshPreview(); });
-  wireSwitch(toggleOutroEl, () => { syncBrandFields(); refreshPreview(); });
-  wireSwitch(toggleCinematicEl, () => { syncBrandFields(); refreshPreview(); });
-  wireSwitch(toggleFilmGrainEl, () => { syncBrandFields(); refreshPreview(); });
-  wireSwitch(toggleVignetteEl, () => { syncBrandFields(); refreshPreview(); });
-  wireSwitch(toggleBreathingShadowEl, () => { syncBrandFields(); refreshPreview(); });
-
-  function syncBrandFields() {
-    const logoEnabled = isSwitchOn(toggleLogoEnabledEl);
-    const watermark = isSwitchOn(toggleWatermarkEl) && logoEnabled;
-
-    el("logoUrl").disabled = !logoEnabled;
-    el("watermarkPos").disabled = !watermark;
-    el("watermarkOpacity").disabled = !watermark;
-    el("watermarkSize").disabled = !watermark;
-
-    const introOn = isSwitchOn(toggleIntroEl);
-    const outroOn = isSwitchOn(toggleOutroEl);
-
-    el("introSec").disabled = !introOn;
-    el("outroSec").disabled = !outroOn;
-    el("outroText").disabled = !outroOn;
-
-    const cinematic = isSwitchOn(toggleCinematicEl);
-    // These are still meaningful only if cinematic effects are on
-    toggleFilmGrainEl.style.opacity = cinematic ? "1" : "0.6";
-    toggleVignetteEl.style.opacity = cinematic ? "1" : "0.6";
-    toggleBreathingShadowEl.style.opacity = cinematic ? "1" : "0.6";
+  for (let i = 0; i < 4; i++){
+    wireSlide(i);
   }
+}
 
-  function currentSlides() {
-    const nodes = slidesEl.querySelectorAll(".slide");
-    return [...nodes].map((node) => {
-      const headline = node.querySelector(".headline").value.trim();
-      const imageUrl = node.querySelector(".imageUrl").value.trim();
-      return { imageUrl, headline: headline || null };
-    });
+/* ---------------- Logo (optional) ---------------- */
+
+const logoState = { file: null, previewUrl: null };
+
+function setLogoFile(file){
+  if (!file || !file.type || !file.type.startsWith("image/")) {
+    throw new Error("Logo file must be an image.");
   }
+  revokeObjectUrl(logoState.previewUrl);
+  logoState.file = file;
+  logoState.previewUrl = URL.createObjectURL(file);
+  logoPreviewEl.innerHTML = `<img src="${logoState.previewUrl}" alt="logo preview" />`;
+  clearLogoBtn.style.display = "inline-block";
+}
 
-  function refreshSlideCount() {
-    slideCountEl.textContent = String(slidesEl.querySelectorAll(".slide").length);
+function clearLogo(){
+  revokeObjectUrl(logoState.previewUrl);
+  logoState.file = null;
+  logoState.previewUrl = null;
+  logoFileEl.value = "";
+  logoPreviewEl.innerHTML = `<span>No logo selected</span>`;
+  clearLogoBtn.style.display = "none";
+}
+
+chooseLogoBtn.addEventListener("click", () => logoFileEl.click());
+clearLogoBtn.addEventListener("click", clearLogo);
+
+logoFileEl.addEventListener("change", () => {
+  const f = logoFileEl.files && logoFileEl.files[0];
+  if (!f) return;
+  try { setLogoFile(f); }
+  catch(err){ logStatus("❌ " + (err.message || String(err))); }
+});
+
+["dragenter","dragover"].forEach(evt => {
+  logoDropEl.addEventListener(evt, (e) => {
+    e.preventDefault(); e.stopPropagation();
+    logoDropEl.classList.add("dragover");
+  });
+});
+["dragleave","drop"].forEach(evt => {
+  logoDropEl.addEventListener(evt, (e) => {
+    e.preventDefault(); e.stopPropagation();
+    logoDropEl.classList.remove("dragover");
+  });
+});
+logoDropEl.addEventListener("drop", (e) => {
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (!f) return;
+  try { setLogoFile(f); }
+  catch(err){ logStatus("❌ " + (err.message || String(err))); }
+});
+
+/* ---------------- Render ---------------- */
+
+function validate(){
+  for (let i = 0; i < 4; i++){
+    if (!slidesState[i].file) throw new Error(`Slide ${i + 1} is missing an image.`);
   }
+  const fps = Number(el("fps").value);
+  const durationSec = Number(el("durationSec").value);
+  const audioVolume = Number(el("audioVolume").value);
+  if (!Number.isFinite(fps) || fps < 1 || fps > 60) throw new Error("FPS must be 1–60.");
+  if (!Number.isFinite(durationSec) || durationSec < 2) throw new Error("Duration must be at least 2 seconds.");
+  if (!Number.isFinite(audioVolume) || audioVolume < 0 || audioVolume > 3) throw new Error("Audio volume must be 0..3.");
+}
 
-  function relabelSlides() {
-    [...slidesEl.querySelectorAll(".slide")].forEach((s, i) => {
-      const pill = s.querySelector(".pill");
-      if (pill) pill.textContent = `Slide ${i + 1}`;
-    });
+async function downloadMp4(res){
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  if (!res.ok){
+    const detail = ct.includes("application/json")
+      ? JSON.stringify(await res.json().catch(() => null), null, 2)
+      : await res.text().catch(() => "");
+    throw new Error(`HTTP ${res.status} ${res.statusText}\n${detail}`);
   }
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  a.href = url;
+  a.download = "video.mp4";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  revokeObjectUrl(url);
+}
 
-  function buildPayload() {
-    const logoEnabled = isSwitchOn(toggleLogoEnabledEl);
-    const watermark = isSwitchOn(toggleWatermarkEl) && logoEnabled;
+renderBtn.addEventListener("click", async () => {
+  try{
+    setRenderingState(true);
 
-    const introOn = isSwitchOn(toggleIntroEl);
-    const outroOn = isSwitchOn(toggleOutroEl);
+    const webhook = el("n8nWebhook").value.trim();
+    if (!webhook) throw new Error("n8n Webhook is empty.");
 
-    const cinematic = isSwitchOn(toggleCinematicEl);
-    const filmGrain = isSwitchOn(toggleFilmGrainEl);
-    const vignette = isSwitchOn(toggleVignetteEl);
-    const breathingShadow = isSwitchOn(toggleBreathingShadowEl);
+    validate();
 
-    const logoUrl = el("logoUrl").value.trim();
-    const watermarkPos = el("watermarkPos").value;
-    const watermarkOpacity = Number(el("watermarkOpacity").value);
-    const watermarkSize = Number(el("watermarkSize").value);
+    const fps = Number(el("fps").value);
+    const durationSec = Number(el("durationSec").value);
+    const audioVolume = Number(el("audioVolume").value);
 
-    const introSec = Number(el("introSec").value);
-    const outroSec = Number(el("outroSec").value);
-    const outroText = el("outroText").value.trim();
+    const fd = new FormData();
+    // required slides
+    fd.append("file0", slidesState[0].file, slidesState[0].file.name || "slide1.png");
+    fd.append("file1", slidesState[1].file, slidesState[1].file.name || "slide2.png");
+    fd.append("file2", slidesState[2].file, slidesState[2].file.name || "slide3.png");
+    fd.append("file3", slidesState[3].file, slidesState[3].file.name || "slide4.png");
 
-    const minSlideSec = Number(el("minSlideSec").value);
+    // optional audio
+    const mp3 = audioMp3El.files && audioMp3El.files[0];
+    if (mp3) fd.append("audio", mp3, mp3.name || "audio.mp3");
 
-    const payload = {
+    // optional logo
+    if (logoState.file) fd.append("logo", logoState.file, logoState.file.name || "logo.png");
+
+    // payload: n8n will enrich with image URLs + logoUrl later
+    fd.append("payload", JSON.stringify({
       format: el("format").value,
       style: el("style").value,
       transition: el("transition").value,
-      durationSec: Number(el("durationSec").value),
-      output: { fps: Number(el("fps").value) },
-      audioVolume: Number(el("audioVolume").value),
-      audioUrl: (el("audioUrl").value.trim() || null),
-      slides: currentSlides().map(s => ({
-        kind: "image",
-        imageUrl: s.imageUrl,
-        headline: s.headline
-      })),
+      durationSec: durationSec,
+      audioVolume: audioVolume,
+      output: { fps: fps },
+      slides: [
+        { headline: null },
+        { headline: null },
+        { headline: null },
+        { headline: null }
+      ],
       brand: {
-        // These names match your render_video.py expectations:
-        logoEnabled: logoEnabled,
-        watermark: watermark,
-        watermarkPos: watermarkPos,
-        watermarkOpacity: watermarkOpacity,
-        watermarkSize: watermarkSize,
-
-        intro: introOn,
-        outro: outroOn,
-        introSec: introSec,
-        outroSec: outroSec,
-        outroText: outroText || "",
-
-        cinematicEffectsEnabled: cinematic,
-        filmGrain: cinematic ? filmGrain : false,
-        vignette: cinematic ? vignette : false,
-        breathingShadow: cinematic ? breathingShadow : false,
-
-        minSlideSec: Number.isFinite(minSlideSec) ? minSlideSec : 2.8,
-
-        // Optional only if provided:
-        ...(logoUrl ? { logoUrl: logoUrl } : {})
+        // n8n will set logoUrl here if logo provided
       }
-    };
+    }));
 
-    // If no audioUrl, remove it so backend sees None / missing consistently
-    if (!payload.audioUrl) delete payload.audioUrl;
+    logStatus(`⬆️ Uploading 4 slides${logoState.file ? " + logo" : ""}${mp3 ? " + audio" : ""} to n8n and rendering…`);
 
-    // If watermark is off, remove watermark tuning fields (cleaner payload)
-    if (!payload.brand.watermark) {
-      delete payload.brand.watermarkPos;
-      delete payload.brand.watermarkOpacity;
-      delete payload.brand.watermarkSize;
-    }
-
-    // If intro/outro off, remove their seconds/text to avoid confusion
-    if (!payload.brand.intro) delete payload.brand.introSec;
-    if (!payload.brand.outro) {
-      delete payload.brand.outroSec;
-      delete payload.brand.outroText;
-    }
-
-    return payload;
-  }
-
-  function validatePayload(payload) {
-    if (!Array.isArray(payload.slides) || payload.slides.length < 4 || payload.slides.length > 25) {
-      throw new Error(`Slides must be 4–25. You have ${payload.slides?.length ?? 0}.`);
-    }
-    for (let i = 0; i < payload.slides.length; i++) {
-      const url = (payload.slides[i].imageUrl || "").trim();
-      if (!url) throw new Error(`Slide ${i + 1} must have imageUrl (your API requires it).`);
-      try { new URL(url); } catch { throw new Error(`Slide ${i + 1} imageUrl is not a valid URL.`); }
-    }
-
-    if (!Number.isFinite(payload.durationSec) || payload.durationSec < 2) throw new Error("Duration must be at least 2 seconds.");
-    if (!Number.isFinite(payload.output?.fps) || payload.output.fps < 1 || payload.output.fps > 60) throw new Error("FPS must be 1–60.");
-    if (!Number.isFinite(payload.audioVolume) || payload.audioVolume < 0 || payload.audioVolume > 3) throw new Error("Audio volume must be 0..3.");
-    if (payload.audioUrl) {
-      try { new URL(payload.audioUrl); } catch { throw new Error("audioUrl is not a valid URL."); }
-    }
-
-    const b = payload.brand || {};
-    if (b.watermarkOpacity !== undefined && (!Number.isFinite(b.watermarkOpacity) || b.watermarkOpacity < 0.05 || b.watermarkOpacity > 1)) {
-      throw new Error("Brand watermarkOpacity must be 0.05..1.");
-    }
-    if (b.watermarkSize !== undefined && (!Number.isFinite(b.watermarkSize) || b.watermarkSize < 40)) {
-      throw new Error("Brand watermarkSize must be ≥ 40.");
-    }
-    if (b.introSec !== undefined && (!Number.isFinite(b.introSec) || b.introSec < 0)) {
-      throw new Error("Brand introSec must be ≥ 0.");
-    }
-    if (b.outroSec !== undefined && (!Number.isFinite(b.outroSec) || b.outroSec < 0)) {
-      throw new Error("Brand outroSec must be ≥ 0.");
-    }
-    if (b.minSlideSec !== undefined && (!Number.isFinite(b.minSlideSec) || b.minSlideSec < 0)) {
-      throw new Error("Brand minSlideSec must be ≥ 0.");
-    }
-  }
-
-  function setRenderingState(isRendering) {
-    renderBtn.disabled = isRendering;
-    renderBtn.textContent = isRendering ? "Rendering…" : "Render Video";
-  }
-
-  async function downloadMp4FromResponse(res) {
-    const ct = (res.headers.get("content-type") || "").toLowerCase();
-
-    if (!res.ok) {
-      const detail = ct.includes("application/json")
-        ? JSON.stringify(await res.json().catch(() => null), null, 2)
-        : await res.text().catch(() => "");
-      throw new Error(`HTTP ${res.status} ${res.statusText}\n${detail}`);
-    }
-
-    const blob = await res.blob();
-    const a = document.createElement("a");
-    const objectUrl = URL.createObjectURL(blob);
-    a.href = objectUrl;
-    a.download = "video.mp4";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(objectUrl);
+    const res = await fetch(webhook, { method: "POST", body: fd });
+    await downloadMp4(res);
 
     logStatus("✅ Done. Downloaded video.mp4");
+  } catch(err){
+    logStatus("❌ " + (err && err.message ? err.message : String(err)));
+  } finally {
+    setRenderingState(false);
   }
+});
 
-  function refreshPreview() {
-    try {
-      const payload = buildPayload();
-      payloadPreviewEl.textContent = JSON.stringify(payload, null, 2);
-    } catch (e) {
-      payloadPreviewEl.textContent = "Preview error: " + (e && e.message ? e.message : String(e));
-    }
-  }
+clearAllBtn.addEventListener("click", () => {
+  for (let i = 0; i < 4; i++) clearSlide(i);
+  clearLogo();
+  if (audioMp3El) audioMp3El.value = "";
+  logStatus("Cleared.");
+});
 
-  function addSlide(data = {}) {
-    const idx = slidesEl.querySelectorAll(".slide").length + 1;
-    const wrap = document.createElement("div");
-    wrap.className = "slide";
-
-    wrap.innerHTML = `
-      <div class="slide-head">
-        <div class="pill">Slide ${idx}</div>
-        <button class="btn danger" type="button" data-action="remove">Remove</button>
-      </div>
-
-      <div class="row">
-        <div class="field">
-          <label>Image URL (required)</label>
-          <input class="imageUrl" type="url" placeholder="https://.../image.jpg" value="${data.imageUrl ? escapeHtml(data.imageUrl) : ""}" />
-          <div class="inline-note">
-            Must be reachable from the container (public URL or your server can access it).
-          </div>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="field">
-          <label>Headline (optional)</label>
-          <input class="headline" type="text" placeholder="Your headline..." value="${data.headline ? escapeHtml(data.headline) : ""}" />
-        </div>
-      </div>
-    `;
-
-    wrap.querySelector('[data-action="remove"]').addEventListener("click", () => {
-      wrap.remove();
-      relabelSlides();
-      refreshSlideCount();
-      refreshPreview();
-    });
-
-    wrap.querySelector(".imageUrl").addEventListener("input", refreshPreview);
-    wrap.querySelector(".headline").addEventListener("input", refreshPreview);
-
-    slidesEl.appendChild(wrap);
-    refreshSlideCount();
-    refreshPreview();
-  }
-
-  el("addSlide").addEventListener("click", () => addSlide());
-  el("clearSlides").addEventListener("click", () => {
-    slidesEl.innerHTML = "";
-    refreshSlideCount();
-    refreshPreview();
-  });
-
-  el("loadDemo").addEventListener("click", () => {
-    slidesEl.innerHTML = "";
-    addSlide({ imageUrl: "https://picsum.photos/seed/one/1080/1920", headline: "Slide one headline" });
-    addSlide({ imageUrl: "https://picsum.photos/seed/two/1080/1920", headline: "Slide two headline" });
-    addSlide({ imageUrl: "https://picsum.photos/seed/three/1080/1920", headline: "Slide three headline" });
-    addSlide({ imageUrl: "https://picsum.photos/seed/four/1080/1920", headline: "Slide four headline" });
-    refreshSlideCount();
-    refreshPreview();
-  });
-
-  // Keep preview live for top-level fields
-  [
-    "apiBase","apiPath","format","style","transition","fps","durationSec","audioVolume",
-    "audioUrl","logoUrl","watermarkPos","watermarkOpacity","watermarkSize",
-    "introSec","outroSec","outroText","minSlideSec"
-  ].forEach(id => {
-    const node = el(id);
-    if (node) node.addEventListener("input", refreshPreview);
-    if (node) node.addEventListener("change", refreshPreview);
-  });
-
-  el("renderBtn").addEventListener("click", async () => {
-    try {
-      setRenderingState(true);
-
-      const apiBase = el("apiBase").value.trim().replace(/\/+$/g, "");
-      const apiPath = el("apiPath").value.trim();
-      if (!apiBase) throw new Error("API Base URL is empty.");
-      if (!apiPath) throw new Error("Render endpoint path is empty.");
-
-      const payload = buildPayload();
-      validatePayload(payload);
-
-      const url = apiBase + (apiPath.startsWith("/") ? apiPath : ("/" + apiPath));
-
-      logStatus("📡 POST " + url + "\nRendering…");
-
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      await downloadMp4FromResponse(res);
-
-    } catch (err) {
-      logStatus("❌ " + (err && err.message ? err.message : String(err)));
-    } finally {
-      setRenderingState(false);
-    }
-  });
-
-  // init
-  syncBrandFields();
-  el("loadDemo").click();
+/* init */
+initSlides();
+logStatus("Ready. Drop 4 images, optional audio/logo, then Render.");
 </script>
+
 </body>
 </html>
-
