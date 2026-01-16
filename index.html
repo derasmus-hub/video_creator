@@ -466,7 +466,12 @@ function revokeObjectUrl(url){
   try { URL.revokeObjectURL(url); } catch {}
 }
 
-/* ---------------- Slides (4..25) ---------------- */
+/* ---------------- Slides (4..25) ----------------
+   IMPORTANT FIX:
+   - We NEVER rebuild the entire slides UI on add/remove.
+   - We append/remove DOM nodes to keep existing file inputs intact.
+   - This prevents losing already-selected files.
+-------------------------------------------------- */
 
 const slidesState = [];
 
@@ -474,9 +479,11 @@ function updateSlidesCount(){
   slidesCountEl.textContent = `${slidesState.length} / ${MAX_SLIDES}`;
 }
 
-function buildSlideBox(index){
+function createSlideElement(index){
   const box = document.createElement("div");
   box.className = "slide-box";
+  box.dataset.slideIndex = String(index);
+
   box.innerHTML = `
     <label>Slide ${index + 1} (required)</label>
     <div class="drop" id="drop_${index}">
@@ -499,47 +506,45 @@ function buildSlideBox(index){
       </div>
     </div>
   `;
-  return box;
-}
 
-function setSlideFile(index, file){
-  if (!file || !file.type || !file.type.startsWith("image/")) {
-    throw new Error("Slide file must be an image.");
+  // Wire events for this one slide (no global rerender)
+  const drop = box.querySelector(`#drop_${index}`);
+  const fileInput = box.querySelector(`#file_${index}`);
+  const chooseBtn = box.querySelector(`#choose_${index}`);
+  const clearBtn = box.querySelector(`#clear_${index}`);
+  const preview = box.querySelector(`#preview_${index}`);
+
+  function setPreview(file){
+    if (!file || !file.type || !file.type.startsWith("image/")) {
+      throw new Error("Slide file must be an image.");
+    }
+
+    // cleanup previous preview
+    revokeObjectUrl(slidesState[index].previewUrl);
+
+    slidesState[index].file = file;
+    slidesState[index].previewUrl = URL.createObjectURL(file);
+
+    preview.innerHTML = `<img src="${slidesState[index].previewUrl}" alt="slide preview" />`;
+    clearBtn.style.display = "inline-block";
   }
-  revokeObjectUrl(slidesState[index].previewUrl);
-  slidesState[index].file = file;
-  slidesState[index].previewUrl = URL.createObjectURL(file);
 
-  el(`preview_${index}`).innerHTML = `<img src="${slidesState[index].previewUrl}" alt="slide preview" />`;
-  el(`clear_${index}`).style.display = "inline-block";
-}
-
-function clearSlide(index){
-  revokeObjectUrl(slidesState[index].previewUrl);
-  slidesState[index].file = null;
-  slidesState[index].previewUrl = null;
-
-  const input = el(`file_${index}`);
-  if (input) input.value = "";
-
-  el(`preview_${index}`).innerHTML = `<span>No image selected</span>`;
-  el(`clear_${index}`).style.display = "none";
-}
-
-function wireSlide(index){
-  const drop = el(`drop_${index}`);
-  const fileInput = el(`file_${index}`);
-  const chooseBtn = el(`choose_${index}`);
-  const clearBtn = el(`clear_${index}`);
+  function clearThis(){
+    revokeObjectUrl(slidesState[index].previewUrl);
+    slidesState[index].file = null;
+    slidesState[index].previewUrl = null;
+    if (fileInput) fileInput.value = "";
+    preview.innerHTML = `<span>No image selected</span>`;
+    clearBtn.style.display = "none";
+  }
 
   chooseBtn.addEventListener("click", () => fileInput.click());
-
-  clearBtn.addEventListener("click", () => clearSlide(index));
+  clearBtn.addEventListener("click", clearThis);
 
   fileInput.addEventListener("change", () => {
     const f = fileInput.files && fileInput.files[0];
     if (!f) return;
-    try { setSlideFile(index, f); }
+    try { setPreview(f); }
     catch(err){ logStatus("❌ " + (err.message || String(err))); }
   });
 
@@ -549,29 +554,31 @@ function wireSlide(index){
       drop.classList.add("dragover");
     });
   });
+
   ["dragleave","drop"].forEach(evt => {
     drop.addEventListener(evt, (e) => {
       e.preventDefault(); e.stopPropagation();
       drop.classList.remove("dragover");
     });
   });
+
   drop.addEventListener("drop", (e) => {
     const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
     if (!f) return;
-    try { setSlideFile(index, f); }
+    try { setPreview(f); }
     catch(err){ logStatus("❌ " + (err.message || String(err))); }
   });
+
+  return box;
 }
 
-function renderSlidesUI(){
-  slidesWrap.innerHTML = "";
-  for (let i = 0; i < slidesState.length; i++){
-    slidesWrap.appendChild(buildSlideBox(i));
-  }
-  for (let i = 0; i < slidesState.length; i++){
-    wireSlide(i);
-  }
-  updateSlidesCount();
+function renumberSlideLabels(){
+  // After removing, we renumber labels only (no rerender, no input destruction)
+  const children = slidesWrap.querySelectorAll(".slide-box");
+  children.forEach((box, idx) => {
+    const label = box.querySelector("label");
+    if (label) label.textContent = `Slide ${idx + 1} (required)`;
+  });
 }
 
 function addSlide(){
@@ -579,8 +586,15 @@ function addSlide(){
     logStatus(`❌ Max slides reached (${MAX_SLIDES}).`);
     return;
   }
+
+  const index = slidesState.length;
   slidesState.push({ file: null, previewUrl: null });
-  renderSlidesUI();
+
+  const node = createSlideElement(index);
+  slidesWrap.appendChild(node);
+
+  updateSlidesCount();
+  renumberSlideLabels();
 }
 
 function removeLastSlide(){
@@ -588,16 +602,40 @@ function removeLastSlide(){
     logStatus(`❌ You must keep at least ${MIN_SLIDES} slides.`);
     return;
   }
-  const last = slidesState.pop();
-  if (last) revokeObjectUrl(last.previewUrl);
-  renderSlidesUI();
+
+  const lastIndex = slidesState.length - 1;
+  const lastState = slidesState[lastIndex];
+  if (lastState) revokeObjectUrl(lastState.previewUrl);
+
+  slidesState.pop();
+
+  // Remove the last DOM node
+  const lastBox = slidesWrap.querySelector(`.slide-box[data-slide-index="${lastIndex}"]`);
+  if (lastBox && lastBox.parentNode) lastBox.parentNode.removeChild(lastBox);
+
+  updateSlidesCount();
+  renumberSlideLabels();
 }
 
 function clearAllSlides(){
+  // cleanup previews
   slidesState.forEach(s => revokeObjectUrl(s.previewUrl));
+
+  // reset state
   slidesState.length = 0;
-  for (let i = 0; i < MIN_SLIDES; i++) slidesState.push({ file: null, previewUrl: null });
-  renderSlidesUI();
+
+  // remove DOM nodes
+  slidesWrap.innerHTML = "";
+
+  // rebuild ONLY ONCE for full reset
+  for (let i = 0; i < MIN_SLIDES; i++){
+    slidesState.push({ file: null, previewUrl: null });
+    const node = createSlideElement(i);
+    slidesWrap.appendChild(node);
+  }
+
+  updateSlidesCount();
+  renumberSlideLabels();
 }
 
 addSlideBtn.addEventListener("click", addSlide);
@@ -711,7 +749,8 @@ renderBtn.addEventListener("click", async () => {
 
     // Slides as repeated "files"
     slidesState.forEach((s, idx) => {
-      fd.append("files", s.file, (s.file && s.file.name) ? s.file.name : `slide_${idx + 1}.png`);
+      const fname = (s.file && s.file.name) ? s.file.name : `slide_${idx + 1}.png`;
+      fd.append("files", s.file, fname);
     });
 
     // optional audio
