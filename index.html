@@ -178,6 +178,12 @@
       border-color: rgba(248,113,113,0.45);
     }
 
+    .btn.small {
+      padding: 8px 10px;
+      font-size: 12px;
+      border-radius: 10px;
+    }
+
     .drop {
       border: 1px dashed rgba(255,255,255,0.22);
       background: rgba(255,255,255,0.04);
@@ -236,6 +242,26 @@
 
     .tiny-note { font-size: 12px; color: rgba(255,255,255,0.65); line-height: 1.3; }
     .section-title { margin: 0 0 8px; font-size: 14px; letter-spacing: 0.2px; }
+
+    .slides-topbar{
+      display:flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .slides-count{
+      color: rgba(255,255,255,0.80);
+      font-size: 12px;
+      font-family: var(--mono);
+    }
+
+    .slide-box{
+      flex: 1;
+      min-width: 240px;
+    }
   </style>
 </head>
 
@@ -245,11 +271,11 @@
       <div>
         <h1>Video Renderer — Control Room</h1>
         <p class="sub">
-          Drop exactly <b>4</b> slide images, optionally add an MP3, optionally add a logo.
-          We send the files to n8n; n8n converts them to URLs and calls your API.
+          Add <b>4–25</b> slide images, optionally add an MP3, optionally add a logo.
+          We send the files to n8n; n8n forwards them to your API.
         </p>
       </div>
-      <div class="pill">Minimal v1</div>
+      <div class="pill">Slides 4–25</div>
     </header>
 
     <div class="grid">
@@ -316,7 +342,17 @@
 
         <div class="divider"></div>
 
-        <h3 class="section-title">1) Slides (required — exactly 4)</h3>
+        <div class="slides-topbar">
+          <div>
+            <h3 class="section-title" style="margin:0;">1) Slides (required — 4 to 25)</h3>
+            <div class="slides-count" id="slidesCount">0 / 25</div>
+          </div>
+          <div class="drop-actions">
+            <button id="addSlideBtn" class="btn small" type="button">+ Add slide</button>
+            <button id="removeSlideBtn" class="btn small danger" type="button">− Remove last</button>
+          </div>
+        </div>
+
         <div id="slides" class="row"></div>
 
         <div class="divider"></div>
@@ -352,7 +388,7 @@
               </div>
               <div id="logoPreview" class="drop-preview"><span>No logo selected</span></div>
               <div class="tiny-note">
-                Sent to n8n as field <span class="pill">logo</span>. n8n will create a URL and set <span class="pill">brand.logoUrl</span>.
+                Sent to n8n as field <span class="pill">logo</span>. n8n forwards as multipart and the API injects <span class="pill">brand.logoUrl</span>.
               </div>
             </div>
           </div>
@@ -377,11 +413,14 @@
         <div class="hint">
           <div style="margin-bottom:8px;"><b>Uploads to n8n:</b></div>
           <ul style="margin:0; padding-left:18px; line-height:1.4;">
-            <li><span class="pill">file0..file3</span> (required)</li>
+            <li><span class="pill">files</span> (repeated, required: 4–25)</li>
             <li><span class="pill">audio</span> (optional)</li>
             <li><span class="pill">logo</span> (optional)</li>
             <li><span class="pill">payload</span> (JSON)</li>
           </ul>
+          <div class="tiny-note" style="margin-top:8px;">
+            Note: Your n8n workflow must accept <span class="pill">files</span> and forward to your API endpoint that supports it (recommended: <span class="pill">/render-multipart</span>).
+          </div>
         </div>
       </div>
     </div>
@@ -405,11 +444,21 @@ const logoPreviewEl = el("logoPreview");
 const chooseLogoBtn = el("chooseLogoBtn");
 const clearLogoBtn = el("clearLogoBtn");
 
+const addSlideBtn = el("addSlideBtn");
+const removeSlideBtn = el("removeSlideBtn");
+const slidesCountEl = el("slidesCount");
+
+const MIN_SLIDES = 4;
+const MAX_SLIDES = 25;
+
 function logStatus(msg){ statusEl.textContent = msg; }
 
 function setRenderingState(on){
   renderBtn.disabled = on;
   renderBtn.textContent = on ? "Rendering…" : "Render Video";
+  addSlideBtn.disabled = on;
+  removeSlideBtn.disabled = on;
+  clearAllBtn.disabled = on;
 }
 
 function revokeObjectUrl(url){
@@ -417,19 +466,17 @@ function revokeObjectUrl(url){
   try { URL.revokeObjectURL(url); } catch {}
 }
 
-/* ---------------- Slides (exactly 4) ---------------- */
+/* ---------------- Slides (4..25) ---------------- */
 
-const slidesState = [
-  { file: null, previewUrl: null },
-  { file: null, previewUrl: null },
-  { file: null, previewUrl: null },
-  { file: null, previewUrl: null }
-];
+const slidesState = [];
+
+function updateSlidesCount(){
+  slidesCountEl.textContent = `${slidesState.length} / ${MAX_SLIDES}`;
+}
 
 function buildSlideBox(index){
   const box = document.createElement("div");
-  box.className = "field";
-  box.style.minWidth = "240px";
+  box.className = "slide-box";
   box.innerHTML = `
     <label>Slide ${index + 1} (required)</label>
     <div class="drop" id="drop_${index}">
@@ -447,6 +494,9 @@ function buildSlideBox(index){
       <div class="drop-preview" id="preview_${index}">
         <span>No image selected</span>
       </div>
+      <div class="tiny-note">
+        Sent to n8n as <span class="pill">files</span> (repeated field).
+      </div>
     </div>
   `;
   return box;
@@ -456,7 +506,6 @@ function setSlideFile(index, file){
   if (!file || !file.type || !file.type.startsWith("image/")) {
     throw new Error("Slide file must be an image.");
   }
-  // cleanup previous preview
   revokeObjectUrl(slidesState[index].previewUrl);
   slidesState[index].file = file;
   slidesState[index].previewUrl = URL.createObjectURL(file);
@@ -469,8 +518,10 @@ function clearSlide(index){
   revokeObjectUrl(slidesState[index].previewUrl);
   slidesState[index].file = null;
   slidesState[index].previewUrl = null;
+
   const input = el(`file_${index}`);
   if (input) input.value = "";
+
   el(`preview_${index}`).innerHTML = `<span>No image selected</span>`;
   el(`clear_${index}`).style.display = "none";
 }
@@ -483,9 +534,7 @@ function wireSlide(index){
 
   chooseBtn.addEventListener("click", () => fileInput.click());
 
-  clearBtn.addEventListener("click", () => {
-    clearSlide(index);
-  });
+  clearBtn.addEventListener("click", () => clearSlide(index));
 
   fileInput.addEventListener("change", () => {
     const f = fileInput.files && fileInput.files[0];
@@ -514,15 +563,45 @@ function wireSlide(index){
   });
 }
 
-function initSlides(){
+function renderSlidesUI(){
   slidesWrap.innerHTML = "";
-  for (let i = 0; i < 4; i++){
+  for (let i = 0; i < slidesState.length; i++){
     slidesWrap.appendChild(buildSlideBox(i));
   }
-  for (let i = 0; i < 4; i++){
+  for (let i = 0; i < slidesState.length; i++){
     wireSlide(i);
   }
+  updateSlidesCount();
 }
+
+function addSlide(){
+  if (slidesState.length >= MAX_SLIDES) {
+    logStatus(`❌ Max slides reached (${MAX_SLIDES}).`);
+    return;
+  }
+  slidesState.push({ file: null, previewUrl: null });
+  renderSlidesUI();
+}
+
+function removeLastSlide(){
+  if (slidesState.length <= MIN_SLIDES) {
+    logStatus(`❌ You must keep at least ${MIN_SLIDES} slides.`);
+    return;
+  }
+  const last = slidesState.pop();
+  if (last) revokeObjectUrl(last.previewUrl);
+  renderSlidesUI();
+}
+
+function clearAllSlides(){
+  slidesState.forEach(s => revokeObjectUrl(s.previewUrl));
+  slidesState.length = 0;
+  for (let i = 0; i < MIN_SLIDES; i++) slidesState.push({ file: null, previewUrl: null });
+  renderSlidesUI();
+}
+
+addSlideBtn.addEventListener("click", addSlide);
+removeSlideBtn.addEventListener("click", removeLastSlide);
 
 /* ---------------- Logo (optional) ---------------- */
 
@@ -580,12 +659,17 @@ logoDropEl.addEventListener("drop", (e) => {
 /* ---------------- Render ---------------- */
 
 function validate(){
-  for (let i = 0; i < 4; i++){
+  if (slidesState.length < MIN_SLIDES) throw new Error(`You must have at least ${MIN_SLIDES} slides.`);
+  if (slidesState.length > MAX_SLIDES) throw new Error(`You can have at most ${MAX_SLIDES} slides.`);
+
+  for (let i = 0; i < slidesState.length; i++){
     if (!slidesState[i].file) throw new Error(`Slide ${i + 1} is missing an image.`);
   }
+
   const fps = Number(el("fps").value);
   const durationSec = Number(el("durationSec").value);
   const audioVolume = Number(el("audioVolume").value);
+
   if (!Number.isFinite(fps) || fps < 1 || fps > 60) throw new Error("FPS must be 1–60.");
   if (!Number.isFinite(durationSec) || durationSec < 2) throw new Error("Duration must be at least 2 seconds.");
   if (!Number.isFinite(audioVolume) || audioVolume < 0 || audioVolume > 3) throw new Error("Audio volume must be 0..3.");
@@ -624,13 +708,11 @@ renderBtn.addEventListener("click", async () => {
     const audioVolume = Number(el("audioVolume").value);
 
     const fd = new FormData();
-    // required slides
-    slidesState.forEach((s) => fd.append("files", s.file, s.file.name));
-    fd.append("payload", JSON.stringify({
-      ...
-      slides: slidesState.map(() => ({ headline: null }))
-    }));
 
+    // Slides as repeated "files"
+    slidesState.forEach((s, idx) => {
+      fd.append("files", s.file, (s.file && s.file.name) ? s.file.name : `slide_${idx + 1}.png`);
+    });
 
     // optional audio
     const mp3 = audioMp3El.files && audioMp3El.files[0];
@@ -639,7 +721,7 @@ renderBtn.addEventListener("click", async () => {
     // optional logo
     if (logoState.file) fd.append("logo", logoState.file, logoState.file.name || "logo.png");
 
-    // payload: n8n will enrich with image URLs + logoUrl later
+    // payload (slides array size must match)
     fd.append("payload", JSON.stringify({
       format: el("format").value,
       style: el("style").value,
@@ -647,18 +729,11 @@ renderBtn.addEventListener("click", async () => {
       durationSec: durationSec,
       audioVolume: audioVolume,
       output: { fps: fps },
-      slides: [
-        { headline: null },
-        { headline: null },
-        { headline: null },
-        { headline: null }
-      ],
-      brand: {
-        // n8n will set logoUrl here if logo provided
-      }
+      slides: slidesState.map(() => ({ headline: null })),
+      brand: {}
     }));
 
-    logStatus(`⬆️ Uploading 4 slides${logoState.file ? " + logo" : ""}${mp3 ? " + audio" : ""} to n8n and rendering…`);
+    logStatus(`⬆️ Uploading ${slidesState.length} slides${logoState.file ? " + logo" : ""}${mp3 ? " + audio" : ""} to n8n and rendering…`);
 
     const res = await fetch(webhook, { method: "POST", body: fd });
     await downloadMp4(res);
@@ -672,21 +747,16 @@ renderBtn.addEventListener("click", async () => {
 });
 
 clearAllBtn.addEventListener("click", () => {
-  for (let i = 0; i < 4; i++) clearSlide(i);
+  clearAllSlides();
   clearLogo();
   if (audioMp3El) audioMp3El.value = "";
   logStatus("Cleared.");
 });
 
 /* init */
-initSlides();
-logStatus("Ready. Drop 4 images, optional audio/logo, then Render.");
+clearAllSlides();
+logStatus("Ready. Add 4–25 images, optional audio/logo, then Render.");
 </script>
 
 </body>
 </html>
-
-
-
-
-
