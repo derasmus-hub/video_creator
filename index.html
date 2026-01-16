@@ -625,10 +625,12 @@ renderBtn.addEventListener("click", async () => {
 
     const fd = new FormData();
     // required slides
-    fd.append("file0", slidesState[0].file, slidesState[0].file.name || "slide1.png");
-    fd.append("file1", slidesState[1].file, slidesState[1].file.name || "slide2.png");
-    fd.append("file2", slidesState[2].file, slidesState[2].file.name || "slide3.png");
-    fd.append("file3", slidesState[3].file, slidesState[3].file.name || "slide4.png");
+    slidesState.forEach((s) => fd.append("files", s.file, s.file.name));
+    fd.append("payload", JSON.stringify({
+      ...
+      slides: slidesState.map(() => ({ headline: null }))
+    }));
+
 
     // optional audio
     const mp3 = audioMp3El.files && audioMp3El.files[0];
@@ -683,6 +685,7 @@ logStatus("Ready. Drop 4 images, optional audio/logo, then Render.");
 
 </body>
 </html>
+
 
 
 
